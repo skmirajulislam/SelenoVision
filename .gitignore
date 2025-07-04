@@ -1,0 +1,219 @@
+# Luna Photoclinometry - Git Ignore File
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# pdm
+.pdm.toml
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Project specific outputs
+output/
+output_*/
+analysis/
+results/
+temp/
+tmp/
+
+# Data files (exclude large datasets but keep small test files)
+data/*.tif
+data/*.img
+data/*.lbl
+data/*.raw
+data/*.dat
+data/*.bin
+# Keep small test images
+!data/moon1.png
+!data/ch2_*.png
+
+# Generated files
+*.log
+*.out
+*.err
+
+# Backup files
+*.bak
+*.backup
+*~
+.DS_Store
+Thumbs.db
+
+# Documentation builds
+docs/_build/
+docs/build/
+
+# Scientific data formats
+*.nc
+*.h5
+*.hdf5
+*.fits
+*.fit
+
+# Temporary processing files
+*_temp.*
+*_tmp.*
+processing_*
+
+# System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+*.tmp
+*.temp
+desktop.ini
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Model files and weights (if any ML components added)
+*.pkl
+*.joblib
+*.model
+weights/
+models/
+
+# Configuration files with sensitive data
+config_local.py
+secrets.json
+credentials.json
+
+# Large output files
+*.obj
+*.ply
+*.stl
+reconstructed_*
+dem_*
+surface_*
+*_visualization.png
+*_analysis.png
+
+# Keep essential files
+!README.md
+!requirements.txt
+!*.py
+!OPTIMIZATION_SUMMARY.md
+!LICENSE
+!.gitignore
