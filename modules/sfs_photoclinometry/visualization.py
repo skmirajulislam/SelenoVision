@@ -19,20 +19,21 @@ def plot_depth_map(dem: np.ndarray, save_path: str, title: str = "Reconstructed 
 
         # Main depth map
         im1 = ax1.imshow(dem, cmap='terrain', aspect='equal')
-        ax1.set_title(f"{title}\nRange: [{dem.min():.1f}, {dem.max():.1f}] m")
+        ax1.set_title(
+            f"{title}\nElevation Range: [{dem.min():.1f}, {dem.max():.1f}] meters")
         ax1.set_xlabel("X (pixels)")
         ax1.set_ylabel("Y (pixels)")
 
         # Add colorbar
         cbar1 = plt.colorbar(im1, ax=ax1, shrink=0.8)
-        cbar1.set_label("Height (meters)")
+        cbar1.set_label("Lunar Surface Height (meters)")
 
         # Histogram of heights
         ax2.hist(dem.flatten(), bins=50, alpha=0.7,
                  color='skyblue', edgecolor='black')
-        ax2.set_title("Height Distribution")
-        ax2.set_xlabel("Height (meters)")
-        ax2.set_ylabel("Frequency")
+        ax2.set_title("Lunar Surface Height Distribution")
+        ax2.set_xlabel("Surface Height (meters)")
+        ax2.set_ylabel("Terrain Pixel Count")
         ax2.grid(True, alpha=0.3)
 
         # Add statistics text
@@ -88,9 +89,9 @@ def plot_3d_surface(dem: np.ndarray, save_path: str, title: str = "Reconstructed
                                   linewidth=0, antialiased=True, shade=True)
 
         ax_3d.set_title(title, fontsize=16, pad=20)
-        ax_3d.set_xlabel("X (pixels)")
-        ax_3d.set_ylabel("Y (pixels)")
-        ax_3d.set_zlabel("Height (meters)")
+        ax_3d.set_xlabel("Longitudinal Distance (pixels)")
+        ax_3d.set_ylabel("Latitudinal Distance (pixels)")
+        ax_3d.set_zlabel("Lunar Surface Elevation (meters)")
 
         # Try to set better aspect ratio (may not work on all matplotlib versions)
         try:

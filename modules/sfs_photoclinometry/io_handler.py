@@ -2,12 +2,6 @@ import numpy as np
 import rasterio
 from rasterio.transform import from_gcps
 from rasterio.control import GroundControlPoint
-import imageio.v2 as imageio  # Use imageio.v2 to avoid deprecation warnings
-
-import numpy as np
-import rasterio
-from rasterio.transform import from_gcps
-from rasterio.control import GroundControlPoint
 import imageio.v2 as imageio
 import os
 import warnings
@@ -15,21 +9,42 @@ import warnings
 
 def load_image(image_path: str) -> np.ndarray:
     """
-    Enhanced image loading with better error handling and preprocessing.
+    Enhanced image loading with support for JPEG, JPG, and PNG formats.
+    - Automatic format detection and validation
     - Converts to grayscale if it's a color image
     - Normalizes to [0, 1] range
-    - Applies basic noise reduction
+    - Handles various bit depths and color spaces
     """
     if not os.path.exists(image_path):
         raise FileNotFoundError(f"Image file not found: {image_path}")
 
+    # Get file extension and validate format
+    file_ext = os.path.splitext(image_path)[1].lower()
+    supported_formats = ['.jpg', '.jpeg', '.png']
+
+    if file_ext not in supported_formats:
+        print(
+            f"Warning: File extension '{file_ext}' not explicitly supported.")
+        print(f"Supported formats: {supported_formats}")
+        print("Attempting to load anyway...")
+
     try:
-        # Load image using imageio
+        # Load image using imageio (supports many formats)
         img_raw = imageio.imread(image_path)
-        print(f"Loaded image: {img_raw.shape}, dtype: {img_raw.dtype}")
+        print(
+            f"Loaded {file_ext.upper()} image: {img_raw.shape}, dtype: {img_raw.dtype}")
+
+        # Handle different bit depths
+        if img_raw.dtype == np.uint16:
+            print("Converting 16-bit image to 8-bit")
+            img_raw = (img_raw / 256).astype(np.uint8)
+        elif img_raw.dtype == np.float32 or img_raw.dtype == np.float64:
+            print("Converting float image to 8-bit")
+            img_raw = (img_raw * 255).astype(np.uint8)
 
     except Exception as e:
-        raise ValueError(f"Failed to load image {image_path}: {e}")
+        raise ValueError(
+            f"Failed to load {file_ext.upper()} image {image_path}: {e}")
 
     # Convert to grayscale if needed
     if img_raw.ndim == 3:
