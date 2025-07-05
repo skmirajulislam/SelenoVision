@@ -48,11 +48,13 @@ This project implements a comprehensive photoclinometry system for reconstructin
    - The system will automatically detect and select the best image for processing
    - Multiple images are tested for compatibility
 
-3. **Run Processing**:
+3. **Run Processing or running server**:
    ```bash
    python luna_unified.py
    ```
-
+   ```bash
+   python app.py
+   ```
 4. **View Results**: 
    - Output files in `output/` directory (GeoTIFF, OBJ, visualizations)
    - Analysis results in `analysis/` directory (quality reports, detailed metrics)
