@@ -4,9 +4,9 @@ Structured Flask application with proper organization
 """
 
 import os
-from app import create_app
-from app.config import config
-from app.utils.helpers import ensure_directory
+from backend import create_app
+from backend.config import config
+from backend.utils.helpers import ensure_directory
 
 
 def setup_directories():

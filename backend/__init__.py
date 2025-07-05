@@ -26,8 +26,8 @@ def create_app():
     CORS(app)
 
     # Register blueprints
-    from app.routes.main import main_bp
-    from app.routes.api import api_bp
+    from backend.routes.main import main_bp
+    from backend.routes.api import api_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
