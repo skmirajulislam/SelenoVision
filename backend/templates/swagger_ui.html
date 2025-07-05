@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luna Photoclinometry API Documentation</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@3.52.5/swagger-ui.css" />
+</head>
+<body>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@3.52.5/swagger-ui-bundle.js"></script>
+    <script>
+        const spec = {
+            "openapi": "3.0.0",
+            "info": {
+                "title": "Luna Photoclinometry API",
+                "description": "REST API for generating high-resolution lunar Digital Elevation Models from single images using Shape-from-Shading photoclinometry techniques. Compatible with Chandrayaan TMC/TMC-2/OHRC, NASA LRO, and JAXA Selene lunar imagery.",
+                "version": "1.0.0",
+                "contact": {
+                    "name": "Luna Photoclinometry Team"
+                }
+            },
+            "servers": [
+                {
+                    "url": window.location.origin,
+                    "description": "Luna Server"
+                }
+            ],
+            "paths": {
+                "/api/upload/process": {
+                    "post": {
+                        "tags": ["Upload"],
+                        "summary": "Upload and process lunar image",
+                        "description": "Upload a lunar image for DEM generation. Returns job ID for tracking.",
+                        "requestBody": {
+                            "content": {
+                                "multipart/form-data": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "image": {
+                                                "type": "string",
+                                                "format": "binary",
+                                                "description": "Lunar image file (PNG, JPG, TIF) - Max 50MB"
+                                            }
+                                        },
+                                        "required": ["image"]
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {
+                            "200": {
+                                "description": "Upload successful",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "job_id": {"type": "string", "description": "Unique job identifier"},
+                                                "status": {"type": "string", "description": "Job status"},
+                                                "message": {"type": "string", "description": "Success message"}
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "400": {
+                                "description": "Bad request - invalid file or missing data"
+                            },
+                            "500": {
+                                "description": "Server error"
+                            }
+                        }
+                    }
+                },
+                "/api/status/{job_id}": {
+                    "get": {
+                        "tags": ["Status"],
+                        "summary": "Get job status",
+                        "description": "Check the processing status and progress of a job",
+                        "parameters": [
+                            {
+                                "name": "job_id",
+                                "in": "path",
+                                "required": true,
+                                "schema": {"type": "string"},
+                                "description": "Job identifier"
+                            }
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "Job status information",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "job_id": {"type": "string"},
+                                                "status": {"type": "string", "enum": ["queued", "processing", "completed", "failed"]},
+                                                "progress": {"type": "number", "minimum": 0, "maximum": 100},
+                                                "message": {"type": "string"},
+                                                "created_at": {"type": "string", "format": "date-time"},
+                                                "updated_at": {"type": "string", "format": "date-time"},
+                                                "error_message": {"type": "string", "nullable": true}
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "404": {
+                                "description": "Job not found"
+                            }
+                        }
+                    }
+                },
+                "/api/results/{job_id}/summary": {
+                    "get": {
+                        "tags": ["Results"],
+                        "summary": "Get processing results summary",
+                        "description": "Get comprehensive results and analysis for completed job",
+                        "parameters": [
+                            {
+                                "name": "job_id",
+                                "in": "path",
+                                "required": true,
+                                "schema": {"type": "string"}
+                            }
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "Processing results and analysis",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "job_id": {"type": "string"},
+                                                "analysis_results": {"type": "object"},
+                                                "processing_info": {"type": "object"},
+                                                "output_files": {"type": "object"}
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "400": {
+                                "description": "Job not completed"
+                            },
+                            "404": {
+                                "description": "Job not found"
+                            }
+                        }
+                    }
+                },
+                "/api/results/{job_id}/download": {
+                    "get": {
+                        "tags": ["Results"],
+                        "summary": "Download complete results as ZIP",
+                        "description": "Download all generated files (DEM, visualizations, analysis) as ZIP archive",
+                        "parameters": [
+                            {
+                                "name": "job_id",
+                                "in": "path",
+                                "required": true,
+                                "schema": {"type": "string"}
+                            }
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "ZIP file download",
+                                "content": {
+                                    "application/zip": {
+                                        "schema": {
+                                            "type": "string",
+                                            "format": "binary"
+                                        }
+                                    }
+                                }
+                            },
+                            "400": {
+                                "description": "Job not completed"
+                            },
+                            "404": {
+                                "description": "Job or file not found"
+                            }
+                        }
+                    }
+                },
+                "/api/results/{job_id}/files/{filename}": {
+                    "get": {
+                        "tags": ["Results"],
+                        "summary": "Download individual result file",
+                        "description": "Download a specific output file by name",
+                        "parameters": [
+                            {
+                                "name": "job_id",
+                                "in": "path",
+                                "required": true,
+                                "schema": {"type": "string"}
+                            },
+                            {
+                                "name": "filename",
+                                "in": "path",
+                                "required": true,
+                                "schema": {"type": "string"},
+                                "description": "File name to download"
+                            }
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "File download",
+                                "content": {
+                                    "*/*": {
+                                        "schema": {
+                                            "type": "string",
+                                            "format": "binary"
+                                        }
+                                    }
+                                }
+                            },
+                            "404": {
+                                "description": "File not found"
+                            }
+                        }
+                    }
+                },
+                "/api/analysis/{job_id}/quality": {
+                    "get": {
+                        "tags": ["Analysis"],
+                        "summary": "Get quality analysis",
+                        "description": "Get detailed quality metrics and analysis for the generated DEM",
+                        "parameters": [
+                            {
+                                "name": "job_id",
+                                "in": "path",
+                                "required": true,
+                                "schema": {"type": "string"}
+                            }
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "Quality analysis data",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "job_id": {"type": "string"},
+                                                "quality_analysis": {"type": "object"},
+                                                "processing_info": {"type": "object"}
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "404": {
+                                "description": "Job not found"
+                            }
+                        }
+                    }
+                },
+                "/health": {
+                    "get": {
+                        "tags": ["Health"],
+                        "summary": "Server health check",
+                        "description": "Check server status and availability",
+                        "responses": {
+                            "200": {
+                                "description": "Server is healthy",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": {"type": "string"},
+                                                "service": {"type": "string"},
+                                                "version": {"type": "string"},
+                                                "timestamp": {"type": "string", "format": "date-time"}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "tags": [
+                {
+                    "name": "Upload",
+                    "description": "Image upload and processing operations"
+                },
+                {
+                    "name": "Status",
+                    "description": "Processing status and monitoring"
+                },
+                {
+                    "name": "Results",
+                    "description": "Results retrieval and download"
+                },
+                {
+                    "name": "Analysis",
+                    "description": "Quality analysis and metrics"
+                },
+                {
+                    "name": "Health",
+                    "description": "Server health and monitoring"
+                }
+            ]
+        };
+        
+        SwaggerUIBundle({
+            url: '',
+            spec: spec,
+            dom_id: '#swagger-ui',
+            presets: [
+                SwaggerUIBundle.presets.apis,
+                SwaggerUIBundle.presets.standalone
+            ],
+            plugins: [
+                SwaggerUIBundle.plugins.DownloadUrl
+            ],
+            layout: "BaseLayout",
+            deepLinking: true,
+            displayOperationId: false,
+            defaultModelsExpandDepth: 1,
+            defaultModelExpandDepth: 1,
+            defaultModelRendering: 'example',
+            displayRequestDuration: true,
+            docExpansion: 'list',
+            filter: true,
+            operationsSorter: 'alpha',
+            showExtensions: true,
+            showCommonExtensions: true,
+            tryItOutEnabled: true
+        });
+    </script>
+</body>
+</html>
