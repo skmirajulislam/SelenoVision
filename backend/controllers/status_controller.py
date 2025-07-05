@@ -5,7 +5,7 @@ Status controller for job monitoring and tracking
 from flask import jsonify
 from datetime import datetime
 
-from app.models.job import JobStatus, job_storage
+from models.job import JobStatus, job_storage
 
 
 class StatusController:

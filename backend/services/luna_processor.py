@@ -8,11 +8,11 @@ from typing import Dict, Any
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
-from app.models.job import ProcessingJob, JobStatus, job_storage
-from app.utils.helpers import get_job_directory, create_results_zip, ensure_directory
+from models.job import ProcessingJob, JobStatus, job_storage
+from utils.helpers import get_job_directory, create_results_zip, ensure_directory
 
 # Import Luna processing functions
-from luna.backend.luna_unified import (
+from processor import (
     load_and_validate_image, optimize_surface_sfs, scale_dem_to_physical,
     create_geotiff, create_obj_file, create_visualizations, analyze_dem_quality,
     save_analysis_results, create_analysis_visualization, compute_illumination_vector,

@@ -4,7 +4,7 @@ Handle image upload and processing initiation
 """
 
 from flask import Blueprint
-from app.controllers.upload_controller import UploadController
+from controllers.upload_controller import UploadController
 
 upload_bp = Blueprint('upload', __name__)
 

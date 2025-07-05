@@ -7,8 +7,8 @@ from flask import current_app, jsonify, send_file
 from PIL import Image
 import mimetypes
 
-from app.models.job import JobStatus, job_storage
-from app.utils.helpers import get_job_directory
+from models.job import JobStatus, job_storage
+from utils.helpers import get_job_directory
 
 
 class ResultsController:

@@ -6,9 +6,9 @@ import os
 from flask import current_app, request, jsonify
 from werkzeug.utils import secure_filename
 
-from app.models.job import ProcessingJob, JobStatus, job_storage
-from app.services.luna_processor import LunaProcessor
-from app.utils.helpers import allowed_file, ensure_directory
+from models.job import ProcessingJob, JobStatus, job_storage
+from services.luna_processor import LunaProcessor
+from utils.helpers import allowed_file, ensure_directory
 
 
 class UploadController:

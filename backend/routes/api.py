@@ -4,10 +4,10 @@ RESTful endpoints for image processing
 """
 
 from flask import Blueprint, jsonify
-from app.routes.upload import upload_bp
-from app.routes.status import status_bp
-from app.routes.results import results_bp
-from app.routes.analysis import analysis_bp
+from routes.upload import upload_bp
+from routes.status import status_bp
+from routes.results import results_bp
+from routes.analysis import analysis_bp
 
 api_bp = Blueprint('api', __name__)
 
@@ -40,7 +40,7 @@ def api_info():
 def api_health():
     """API health check"""
     from datetime import datetime
-    from app.models.job import job_storage
+    from models.job import job_storage
 
     return jsonify({
         "status": "healthy",

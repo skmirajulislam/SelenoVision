@@ -3,10 +3,16 @@ Luna Photoclinometry Server - Main Entry Point
 Structured Flask application with proper organization
 """
 
+from config import config
+from utils.helpers import ensure_directory
+from __init__ import create_app
 import os
-from app import create_app
-from app.config import config
-from app.utils.helpers import ensure_directory
+import sys
+from pathlib import Path
+
+# Add the backend directory to the path
+backend_dir = Path(__file__).parent
+sys.path.insert(0, str(backend_dir))
 
 
 def setup_directories():

@@ -4,7 +4,7 @@ Handle job status monitoring and tracking
 """
 
 from flask import Blueprint
-from app.controllers.status_controller import StatusController
+from controllers.status_controller import StatusController
 
 status_bp = Blueprint('status', __name__)
 

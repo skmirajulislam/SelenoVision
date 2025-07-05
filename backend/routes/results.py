@@ -4,7 +4,7 @@ Handle results retrieval and file downloads
 """
 
 from flask import Blueprint
-from app.controllers.results_controller import ResultsController
+from controllers.results_controller import ResultsController
 
 results_bp = Blueprint('results', __name__)
 

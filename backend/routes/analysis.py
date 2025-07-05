@@ -4,7 +4,7 @@ Handle quality analysis and metrics
 """
 
 from flask import Blueprint
-from app.controllers.analysis_controller import AnalysisController
+from controllers.analysis_controller import AnalysisController
 
 analysis_bp = Blueprint('analysis', __name__)
 
