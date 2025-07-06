@@ -49,9 +49,6 @@ const Index = () => {
           <div className="hidden md:flex items-center space-x-8">
             {isAuthenticated ? (
               <>
-                <Link to="/upload" className="text-gray-300 hover:text-white transition-colors">
-                  Upload
-                </Link>
                 <Link to="/dashboard" className="text-gray-300 hover:text-white transition-colors">
                   Dashboard
                 </Link>

@@ -3,7 +3,7 @@ Upload controller for Luna photoclinometry operations
 """
 
 import os
-from flask import current_app, request, jsonify
+from flask import Blueprint, current_app, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, verify_jwt_in_request
 from werkzeug.utils import secure_filename
 
@@ -11,66 +11,65 @@ from models.job import ProcessingJob, JobStatus, job_storage
 from services.luna_processor import LunaProcessor
 from utils.helpers import allowed_file, ensure_directory
 
+upload_bp = Blueprint('upload', __name__)
 
-class UploadController:
-    """Handle image upload and processing initiation"""
 
-    @staticmethod
-    @jwt_required(optional=True)
-    def upload_and_process():
-        """Upload lunar image and start processing"""
+@upload_bp.route('/upload', methods=['POST'])
+@jwt_required(optional=True)
+def upload_and_process():
+    """Upload lunar image and start processing"""
+    try:
+        # Get current user if authenticated
+        user_id = None
         try:
-            # Get current user if authenticated
-            user_id = None
-            try:
-                verify_jwt_in_request(optional=True)
-                user_id = get_jwt_identity()
-            except:
-                pass  # Continue without authentication
+            verify_jwt_in_request(optional=True)
+            user_id = get_jwt_identity()
+        except:
+            pass  # Continue without authentication
 
-            # Check if image file is present
-            if 'image' not in request.files:
-                return jsonify({"error": "No image file provided"}), 400
+        # Check if image file is present
+        if 'image' not in request.files:
+            return jsonify({"error": "No image file provided"}), 400
 
-            file = request.files['image']
-            if file.filename == '':
-                return jsonify({"error": "No image file selected"}), 400
+        file = request.files['image']
+        if file.filename == '':
+            return jsonify({"error": "No image file selected"}), 400
 
-            if not allowed_file(file.filename, current_app.config['ALLOWED_EXTENSIONS']):
-                return jsonify({
-                    "error": f"Unsupported file type. Allowed: {', '.join(current_app.config['ALLOWED_EXTENSIONS'])}"
-                }), 400
-
-            # Ensure upload directory exists
-            ensure_directory(current_app.config['UPLOAD_FOLDER'])
-
-            # Create new job
-            job = ProcessingJob.create_new("", file.filename)
-
-            # Save uploaded file
-            filename = secure_filename(file.filename)
-            file_path = os.path.join(
-                current_app.config['UPLOAD_FOLDER'], f"{job.job_id}_{filename}")
-            file.save(file_path)
-            job.image_path = file_path
-
-            # Store job
-            job_storage[job.job_id] = job
-
-            # Submit for processing with user ID
-            LunaProcessor.submit_processing_job(job, user_id)
-
+        if not allowed_file(file.filename, current_app.config['ALLOWED_EXTENSIONS']):
             return jsonify({
-                "job_id": job.job_id,
-                "status": job.status.value,
-                "message": "Image uploaded successfully. Processing started.",
-                "filename": job.original_filename,
-                "file_size": os.path.getsize(file_path) if os.path.exists(file_path) else 0,
-                "user_authenticated": user_id is not None
-            }), 200
+                "error": f"Unsupported file type. Allowed: {', '.join(current_app.config['ALLOWED_EXTENSIONS'])}"
+            }), 400
 
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
+        # Ensure upload directory exists
+        ensure_directory(current_app.config['UPLOAD_FOLDER'])
+
+        # Create new job
+        job = ProcessingJob.create_new("", file.filename)
+
+        # Save uploaded file
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(
+            current_app.config['UPLOAD_FOLDER'], f"{job.job_id}_{filename}")
+        file.save(file_path)
+        job.image_path = file_path
+
+        # Store job
+        job_storage[job.job_id] = job
+
+        # Submit for processing with user ID
+        LunaProcessor.submit_processing_job(job, user_id)
+
+        return jsonify({
+            "job_id": job.job_id,
+            "status": job.status.value,
+            "message": "Image uploaded successfully. Processing started.",
+            "filename": job.original_filename,
+            "file_size": os.path.getsize(file_path) if os.path.exists(file_path) else 0,
+            "user_authenticated": user_id is not None
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
     @staticmethod
     def get_supported_formats():

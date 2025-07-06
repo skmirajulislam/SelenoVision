@@ -22,27 +22,37 @@ class User:
     @staticmethod
     def create_user(email, username, password):
         """Create a new user"""
-        db = get_db()
+        try:
+            db = get_db()
 
-        # Check if user already exists
-        if db.users.find_one({"$or": [{"email": email}, {"username": username}]}):
+            # Check if user already exists
+            existing_user = db.users.find_one(
+                {"$or": [{"email": email}, {"username": username}]})
+            if existing_user:
+                print(
+                    f"User already exists: email={email}, username={username}")
+                return None
+
+            password_hash = generate_password_hash(password)
+            user_data = {
+                "email": email,
+                "username": username,
+                "password_hash": password_hash,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            }
+
+            result = db.users.insert_one(user_data)
+            print(f"User created successfully: {result.inserted_id}")
+            return User.find_by_id(result.inserted_id)
+        except Exception as e:
+            print(f"Error creating user: {e}")
             return None
-
-        password_hash = generate_password_hash(password)
-        user_data = {
-            "email": email,
-            "username": username,
-            "password_hash": password_hash,
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
-        }
-
-        result = db.users.insert_one(user_data)
-        return User.find_by_id(result.inserted_id)
 
     @staticmethod
     def find_by_email(email):
         """Find user by email"""
+
         db = get_db()
         user_data = db.users.find_one({"email": email})
         if user_data:
@@ -56,9 +66,26 @@ class User:
             )
         return None
 
+        try:
+            db = get_db()
+            user_data = db.users.find_one({"email": email})
+            if user_data:
+                return User(
+                    email=user_data["email"],
+                    username=user_data["username"],
+                    password_hash=user_data["password_hash"],
+                    _id=user_data["_id"]
+                )
+            return None
+        except Exception as e:
+            print(f"Error finding user by email: {e}")
+            return None
+
+
     @staticmethod
     def find_by_id(user_id):
         """Find user by ID"""
+
         db = get_db()
         if isinstance(user_id, str):
             user_id = ObjectId(user_id)
@@ -74,14 +101,37 @@ class User:
                 updated_at=user_data.get("updated_at")
             )
         return None
+=======
+        try:
+            db = get_db()
+            if isinstance(user_id, str):
+                user_id = ObjectId(user_id)
+
+            user_data = db.users.find_one({"_id": user_id})
+            if user_data:
+                return User(
+                    email=user_data["email"],
+                    username=user_data["username"],
+                    password_hash=user_data["password_hash"],
+                    _id=user_data["_id"]
+                )
+            return None
+        except Exception as e:
+            print(f"Error finding user by ID: {e}")
+            return None
+
 
     @staticmethod
     def authenticate(email, password):
         """Authenticate user with email and password"""
-        user = User.find_by_email(email)
-        if user and check_password_hash(user.password_hash, password):
-            return user
-        return None
+        try:
+            user = User.find_by_email(email)
+            if user and user.password_hash and check_password_hash(user.password_hash, password):
+                return user
+            return None
+        except Exception as e:
+            print(f"Error authenticating user: {e}")
+            return None
 
     def delete_user(self):
         """Delete user and all associated data"""
