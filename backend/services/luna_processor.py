@@ -3,12 +3,15 @@ Luna processing service - handles the actual image processing
 """
 
 import os
+import json
 import shutil
 from typing import Dict, Any
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 from models.job import ProcessingJob, JobStatus, job_storage
+from models.processing_result import ProcessingResult
+from services.cloudinary_service import CloudinaryService
 from utils.helpers import get_job_directory, create_results_zip, ensure_directory
 
 # Import Luna processing functions
@@ -24,19 +27,30 @@ processing_executor = ThreadPoolExecutor(max_workers=3)
 
 
 class LunaProcessor:
-    """Luna image processing service"""
+    """Luna image processing service with cloud integration"""
 
     @staticmethod
-    def submit_processing_job(job: ProcessingJob) -> None:
+    def submit_processing_job(job: ProcessingJob, user_id: str = None) -> None:
         """Submit job for background processing"""
-        future = processing_executor.submit(LunaProcessor._process_image, job)
+        future = processing_executor.submit(
+            LunaProcessor._process_image, job, user_id)
         # Store future reference for potential cancellation
-        job.future = future
+        if hasattr(job, 'future'):
+            job.future = future
 
     @staticmethod
-    def _process_image(job: ProcessingJob) -> Dict[str, Any]:
-        """Process lunar image with comprehensive result generation"""
+    def _process_image(job: ProcessingJob, user_id: str = None) -> Dict[str, Any]:
+        """Process lunar image with comprehensive result generation and cloud storage"""
         try:
+            # Create processing result in database
+            processing_result = None
+            if user_id:
+                processing_result = ProcessingResult.create_result(
+                    user_id=user_id,
+                    job_id=job.job_id,
+                    original_filename=job.original_filename
+                )
+
             # Update job status
             job.update_status(JobStatus.PROCESSING, 10,
                               "Loading and validating image...")
@@ -131,10 +145,76 @@ class LunaProcessor:
                 dem_scaled, image, analysis_results, analysis_dir)
 
             job.update_status(JobStatus.PROCESSING, 95,
-                              "Creating results package...")
+                              "Uploading to cloud storage...")
 
             # Create ZIP file with all results
             zip_path = create_results_zip(job.job_id, 'server_results')
+
+            # Upload to Cloudinary if user is authenticated
+            cloudinary_urls = {}
+            if processing_result:
+                cloudinary_service = CloudinaryService()
+
+                # Prepare files for upload with expected structure
+                files_to_upload = {
+                    "original_image": job.image_path,
+                    "geotiff": geotiff_path,
+                    "main_visualization": None,
+                    "analysis_plot": None,
+                    "slope_analysis": None,
+                    "aspect_analysis": None,
+                    "hillshade": None,
+                    "contour_lines": None,
+                    "quality_report": None,
+                    "processing_log": None
+                }
+
+                # Map specific visualization files
+                viz_mapping = {
+                    "main_visualization": "ultra_clear_dem.png",
+                    "analysis_plot": "comprehensive_analysis.png",
+                    "slope_analysis": "lunar_surface_analysis.png",
+                    "aspect_analysis": "high_contrast_dem.png",
+                    "hillshade": "publication_quality_dem.png",
+                    "contour_lines": "lunar_terrain_3d.png"
+                }
+
+                for key, filename in viz_mapping.items():
+                    file_path = os.path.join(output_dir, filename)
+                    if os.path.exists(file_path):
+                        files_to_upload[key] = file_path
+
+                # Analysis files
+                analysis_mapping = {
+                    "quality_report": os.path.join(analysis_dir, "analysis_summary.png"),
+                    "processing_log": os.path.join(analysis_dir, "analysis_report.txt")
+                }
+
+                for key, file_path in analysis_mapping.items():
+                    if os.path.exists(file_path):
+                        files_to_upload[key] = file_path
+
+                # Upload files to Cloudinary with new structure
+                cloudinary_urls = cloudinary_service.upload_luna_analysis_files(
+                    job.job_id, files_to_upload)
+
+                # Convert analysis report to JSON
+                analysis_report_json = {}
+                analysis_report_path = os.path.join(
+                    analysis_dir, "analysis_report.txt")
+                if os.path.exists(analysis_report_path):
+                    analysis_report_json = LunaProcessor._convert_analysis_report_to_json(
+                        analysis_report_path)
+
+                # Update processing result in database
+                processing_result.update_status(
+                    status="completed",
+                    processing_info=processing_info,
+                    analysis_results=analysis_results
+                )
+                processing_result.update_cloudinary_urls(cloudinary_urls)
+                processing_result.update_analysis_report_json(
+                    analysis_report_json)
 
             # Prepare final results
             results = {
@@ -162,6 +242,7 @@ class LunaProcessor:
                     ]
                 },
                 "download_zip": f"luna_results_{job.job_id}.zip",
+                "cloudinary_urls": cloudinary_urls,
                 "completed_at": datetime.now().isoformat()
             }
 
@@ -170,9 +251,87 @@ class LunaProcessor:
             job.update_status(JobStatus.COMPLETED, 100,
                               "Processing completed successfully!")
 
+            # Clean up temporary files after a delay to allow downloads
+            # (In production, you might want to implement a cleanup job)
+
             return results
 
         except Exception as e:
             error_msg = f"Processing failed: {str(e)}"
             job.set_error(error_msg)
+
+            # Update processing result if exists
+            if processing_result:
+                processing_result.update_status("failed")
+
             raise e
+
+    @staticmethod
+    def _convert_analysis_report_to_json(report_path: str) -> Dict[str, Any]:
+        """Convert analysis report text file to JSON format"""
+        try:
+            with open(report_path, 'r') as f:
+                content = f.read()
+
+            # Parse the analysis report (basic implementation)
+            report_json = {
+                "raw_content": content,
+                "summary": {},
+                "metrics": {},
+                "recommendations": []
+            }
+
+            # Extract key metrics from the text
+            lines = content.split('\n')
+            current_section = None
+
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+
+                if "SUMMARY" in line.upper():
+                    current_section = "summary"
+                elif "METRIC" in line.upper():
+                    current_section = "metrics"
+                elif "RECOMMENDATION" in line.upper():
+                    current_section = "recommendations"
+                elif current_section and ":" in line:
+                    key, value = line.split(":", 1)
+                    key = key.strip()
+                    value = value.strip()
+
+                    if current_section == "summary":
+                        report_json["summary"][key] = value
+                    elif current_section == "metrics":
+                        # Try to convert to number if possible
+                        try:
+                            if "." in value:
+                                report_json["metrics"][key] = float(value)
+                            else:
+                                report_json["metrics"][key] = int(value)
+                        except ValueError:
+                            report_json["metrics"][key] = value
+                    elif current_section == "recommendations":
+                        report_json["recommendations"].append({
+                            "category": key,
+                            "description": value
+                        })
+
+            return report_json
+
+        except Exception as e:
+            print(f"Error converting analysis report to JSON: {e}")
+            return {"error": str(e)}
+
+    @staticmethod
+    def cleanup_temporary_files(job_id: str):
+        """Clean up temporary files for a job"""
+        try:
+            job_dir = get_job_directory(job_id, 'server_results')
+            if os.path.exists(job_dir):
+                shutil.rmtree(job_dir)
+            return True
+        except Exception as e:
+            print(f"Error cleaning up temporary files: {e}")
+            return False

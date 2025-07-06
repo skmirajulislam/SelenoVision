@@ -4,6 +4,7 @@ Upload controller for Luna photoclinometry operations
 
 import os
 from flask import current_app, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity, verify_jwt_in_request
 from werkzeug.utils import secure_filename
 
 from models.job import ProcessingJob, JobStatus, job_storage
@@ -15,9 +16,18 @@ class UploadController:
     """Handle image upload and processing initiation"""
 
     @staticmethod
+    @jwt_required(optional=True)
     def upload_and_process():
         """Upload lunar image and start processing"""
         try:
+            # Get current user if authenticated
+            user_id = None
+            try:
+                verify_jwt_in_request(optional=True)
+                user_id = get_jwt_identity()
+            except:
+                pass  # Continue without authentication
+
             # Check if image file is present
             if 'image' not in request.files:
                 return jsonify({"error": "No image file provided"}), 400
@@ -47,15 +57,16 @@ class UploadController:
             # Store job
             job_storage[job.job_id] = job
 
-            # Submit for processing
-            LunaProcessor.submit_processing_job(job)
+            # Submit for processing with user ID
+            LunaProcessor.submit_processing_job(job, user_id)
 
             return jsonify({
                 "job_id": job.job_id,
                 "status": job.status.value,
                 "message": "Image uploaded successfully. Processing started.",
                 "filename": job.original_filename,
-                "file_size": os.path.getsize(file_path) if os.path.exists(file_path) else 0
+                "file_size": os.path.getsize(file_path) if os.path.exists(file_path) else 0,
+                "user_authenticated": user_id is not None
             }), 200
 
         except Exception as e:
