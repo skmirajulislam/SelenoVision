@@ -58,11 +58,20 @@ interface DashboardData {
 }
 
 const Dashboard: React.FC = () => {
-  const { user, token } = useAuth();
+  const { user, token, loading: authLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      console.log('🔒 User not authenticated, redirecting to login');
+      navigate('/login');
+      return;
+    }
+  }, [authLoading, isAuthenticated, navigate]);
 
   const fetchDashboardData = useCallback(async () => {
     if (!token) return;
@@ -147,8 +156,24 @@ const Dashboard: React.FC = () => {
     });
   };
 
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/login');
+    }
+  }, [user, navigate, authLoading]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-900 to-indigo-900 flex items-center justify-center">
+        <div className="text-center text-white">
+          <Moon className="w-16 h-16 mx-auto mb-4 animate-pulse" />
+          <p className="text-xl">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!user) {
-    navigate('/login');
     return null;
   }
 

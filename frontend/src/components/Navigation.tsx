@@ -73,8 +73,8 @@ const Navigation: React.FC = () => {
                                     key={item.href}
                                     to={item.href}
                                     className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive
-                                            ? 'bg-blue-600 text-white'
-                                            : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+                                        ? 'bg-blue-600 text-white'
+                                        : 'text-slate-300 hover:bg-slate-700 hover:text-white'
                                         }`}
                                 >
                                     <item.icon className="h-4 w-4" />
@@ -115,8 +115,8 @@ const Navigation: React.FC = () => {
                                     key={item.href}
                                     to={item.href}
                                     className={`flex flex-col items-center gap-1 p-2 rounded-md text-xs transition-colors ${isActive
-                                            ? 'text-blue-400'
-                                            : 'text-slate-400 hover:text-white'
+                                        ? 'text-blue-400'
+                                        : 'text-slate-400 hover:text-white'
                                         }`}
                                 >
                                     <item.icon className="h-5 w-5" />

@@ -1,4 +1,12 @@
-const API_BASE_URL = 'http://localhost:5000';
+import Cookies from 'js-cookie';
+import { API_CONFIG, STORAGE_KEYS } from '../config/constants';
+
+const API_BASE_URL = API_CONFIG.BASE_URL;
+
+// Helper function to get token consistently
+const getAuthToken = (): string | null => {
+  return Cookies.get(STORAGE_KEYS.TOKEN) || null;
+};
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -135,8 +143,82 @@ export const api = {
     }
   },
 
+  // Get user results
+  getUserResults: async (): Promise<ApiResponse<any[]>> => {
+    try {
+      const token = getAuthToken();
+      console.log('🔐 Token retrieved for getUserResults:', token ? 'Present' : 'Missing');
+
+      if (!token) {
+        console.log('❌ No authentication token found');
+        return {
+          success: false,
+          error: 'No authentication token found'
+        };
+      }
+
+      console.log('📡 Making API call to:', `${API_BASE_URL}/api/results/`);
+      const response = await fetch(`${API_BASE_URL}/api/results/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      console.log('📊 API Response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ API Response data:', { success: data.success, resultsCount: data.results?.length, total: data.total });
+      return { success: true, data: data.results || [] };
+    } catch (error) {
+      console.error('❌ User results fetch error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get user results'
+      };
+    }
+  },
+
+  // Delete user result
+  deleteUserResult: async (resultId: string): Promise<ApiResponse<any>> => {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        return {
+          success: false,
+          error: 'No authentication token found'
+        };
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/results/${resultId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return { success: true, data };
+    } catch (error) {
+      console.error('Delete result error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to delete result'
+      };
+    }
+  },
+
   // Health check
-  healthCheck: async (): Promise<ApiResponse<{ status: string }>> => {
+  healthCheck: async (): Promise<ApiResponse<any>> => {
     try {
       const response = await fetch(`${API_BASE_URL}/health`);
 

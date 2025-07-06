@@ -97,6 +97,12 @@ class CloudinaryService:
 
         for key, file_path in files_dict.items():
             if file_path and os.path.exists(file_path):
+                # Skip txt files - don't upload to cloudinary
+                if file_path.lower().endswith('.txt'):
+                    print(
+                        f"⚠️ Skipping txt file upload for {key}: {file_path}")
+                    continue
+
                 mapping = file_mappings.get(
                     key, {'resource_type': 'auto', 'compress': False})
                 folder = f"{base_folder}/{key}"

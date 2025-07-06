@@ -20,7 +20,7 @@ interface UserStats {
 }
 
 const Profile: React.FC = () => {
-  const { user, logout, deleteAccount } = useAuth();
+  const { user, logout, deleteAccount, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -158,6 +158,23 @@ const Profile: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/login');
+    }
+  }, [user, navigate, authLoading]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center text-white">
+          <User className="w-16 h-16 mx-auto mb-4 animate-pulse" />
+          <p className="text-xl">Loading Profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return null;

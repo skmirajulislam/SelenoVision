@@ -3,7 +3,7 @@ Luna Photoclinometry Flask Application Factory
 Main application initialization and configuration
 """
 
-from flask import Flask
+from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -32,6 +32,19 @@ def create_app():
     # Initialize extensions
     jwt = JWTManager(app)
 
+    # JWT error handlers
+    @jwt.expired_token_loader
+    def expired_token_callback(jwt_header, jwt_payload):
+        return jsonify({'error': 'Token has expired'}), 401
+
+    @jwt.invalid_token_loader
+    def invalid_token_callback(error):
+        return jsonify({'error': 'Invalid token'}), 422
+
+    @jwt.unauthorized_loader
+    def missing_token_callback(error):
+        return jsonify({'error': 'Authorization token is required'}), 401
+
     # Initialize MongoDB
     from database import init_db
     init_db(app)
@@ -40,14 +53,19 @@ def create_app():
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1,
                             x_proto=1, x_host=1, x_prefix=1)
 
-    # CORS
-    CORS(app, origins=[
-        os.getenv('FRONTEND_URL', 'http://localhost:3000'),
-        'http://localhost:8080',
-        'http://localhost:8081',
-        'http://localhost:3000',
-        'http://localhost:5173'
-    ])
+    # CORS Configuration with explicit settings
+    CORS(app,
+         origins=[
+             os.getenv('FRONTEND_URL', 'http://localhost:3000'),
+             'http://localhost:8080',
+             'http://localhost:8081',
+             'http://localhost:3000',
+             'http://localhost:5173'
+         ],
+         supports_credentials=True,
+         allow_headers=['Content-Type', 'Authorization'],
+         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+         )
 
     # Register blueprints
     try:
@@ -69,5 +87,9 @@ def create_app():
     # Upload controller
     from controllers.upload_controller import upload_bp
     app.register_blueprint(upload_bp, url_prefix='/api')
+
+    # Status routes
+    from routes.status import status_bp
+    app.register_blueprint(status_bp, url_prefix='/api/status')
 
     return app

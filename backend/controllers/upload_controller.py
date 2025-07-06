@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 
 from models.job import ProcessingJob, JobStatus, job_storage
 from services.luna_processor import LunaProcessor
-from utils.helpers import allowed_file, ensure_directory
+from utils.helpers import allowed_file, ensure_directory, cleanup_directory, cleanup_user_files
 
 upload_bp = Blueprint('upload', __name__)
 
@@ -24,7 +24,7 @@ def upload_and_process():
         try:
             verify_jwt_in_request(optional=True)
             user_id = get_jwt_identity()
-        except:
+        except Exception as e:
             pass  # Continue without authentication
 
         # Check if image file is present
@@ -32,6 +32,7 @@ def upload_and_process():
             return jsonify({"error": "No image file provided"}), 400
 
         file = request.files['image']
+
         if file.filename == '':
             return jsonify({"error": "No image file selected"}), 400
 
@@ -40,8 +41,19 @@ def upload_and_process():
                 "error": f"Unsupported file type. Allowed: {', '.join(current_app.config['ALLOWED_EXTENSIONS'])}"
             }), 400
 
-        # Ensure upload directory exists
+        # Cleanup previous uploads and results (server-side only, not from Cloudinary)
+        if user_id:
+            cleanup_user_files(user_id)
+
+        # Cleanup old uploads directory completely
+        cleanup_directory(current_app.config['UPLOAD_FOLDER'])
+
+        # Cleanup old server_results directory completely
+        cleanup_directory(current_app.config['RESULTS_FOLDER'])
+
+        # Ensure directories exist
         ensure_directory(current_app.config['UPLOAD_FOLDER'])
+        ensure_directory(current_app.config['RESULTS_FOLDER'])
 
         # Create new job
         job = ProcessingJob.create_new("", file.filename)
@@ -55,6 +67,13 @@ def upload_and_process():
 
         # Store job
         job_storage[job.job_id] = job
+
+        # Create database record for authenticated users
+        if user_id:
+            from models.processing_result import ProcessingResult
+            result_id = ProcessingResult.create_result(
+                user_id, job.job_id, file.filename)
+            job.result_id = result_id
 
         # Submit for processing with user ID
         LunaProcessor.submit_processing_job(job, user_id)

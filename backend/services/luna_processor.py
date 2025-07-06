@@ -43,12 +43,12 @@ class LunaProcessor:
         """Process lunar image with comprehensive result generation and cloud storage"""
         try:
             # Create processing result in database
-            processing_result = None
+            processing_result_id = None
             if user_id:
-                processing_result = ProcessingResult.create_result(
+                processing_result_id = ProcessingResult.create_result(
                     user_id=user_id,
                     job_id=job.job_id,
-                    original_filename=job.original_filename
+                    filename=job.original_filename
                 )
 
             # Update job status
@@ -152,7 +152,7 @@ class LunaProcessor:
 
             # Upload to Cloudinary if user is authenticated
             cloudinary_urls = {}
-            if processing_result:
+            if processing_result_id:
                 cloudinary_service = CloudinaryService()
 
                 # Prepare files for upload with expected structure
@@ -207,14 +207,14 @@ class LunaProcessor:
                         analysis_report_path)
 
                 # Update processing result in database
-                processing_result.update_status(
-                    status="completed",
-                    processing_info=processing_info,
-                    analysis_results=analysis_results
-                )
-                processing_result.update_cloudinary_urls(cloudinary_urls)
-                processing_result.update_analysis_report_json(
-                    analysis_report_json)
+                if processing_result_id:
+                    ProcessingResult.update_status(
+                        processing_result_id,
+                        status="completed",
+                        processing_info=processing_info,
+                        analysis_results=analysis_results,
+                        cloudinary_urls=cloudinary_urls
+                    )
 
             # Prepare final results
             results = {

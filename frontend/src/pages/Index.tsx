@@ -142,7 +142,7 @@ const Index = () => {
               </>
             )}
             <a
-              href="http://localhost:5000/docs"
+              href="http://localhost:5002/docs"
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-8 py-4 rounded-xl font-semibold hover:bg-white/20 transition-all duration-300"

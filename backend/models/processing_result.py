@@ -105,6 +105,18 @@ class ProcessingResult:
                 result = db.processing_results.find_one({'_id': object_id})
             if result:
                 result['_id'] = str(result['_id'])
+
+                # Convert datetime objects to ISO format strings for JSON serialization
+                if 'created_at' in result:
+                    if isinstance(result['created_at'], datetime):
+                        result['created_at'] = result['created_at'].isoformat()
+                if 'updated_at' in result:
+                    if isinstance(result['updated_at'], datetime):
+                        result['updated_at'] = result['updated_at'].isoformat()
+                if 'completed_at' in result:
+                    if isinstance(result['completed_at'], datetime):
+                        result['completed_at'] = result['completed_at'].isoformat()
+
             return result
         except Exception as e:
             print(f"Error finding processing result: {e}")
@@ -118,6 +130,18 @@ class ProcessingResult:
             result = db.processing_results.find_one({'job_id': job_id})
             if result:
                 result['_id'] = str(result['_id'])
+
+                # Convert datetime objects to ISO format strings for JSON serialization
+                if 'created_at' in result:
+                    if isinstance(result['created_at'], datetime):
+                        result['created_at'] = result['created_at'].isoformat()
+                if 'updated_at' in result:
+                    if isinstance(result['updated_at'], datetime):
+                        result['updated_at'] = result['updated_at'].isoformat()
+                if 'completed_at' in result:
+                    if isinstance(result['completed_at'], datetime):
+                        result['completed_at'] = result['completed_at'].isoformat()
+
             return result
         except Exception as e:
             print(f"Error finding processing result: {e}")
@@ -135,6 +159,17 @@ class ProcessingResult:
             for result in results:
                 result['_id'] = str(result['_id'])
 
+                # Convert datetime objects to ISO format strings for JSON serialization
+                if 'created_at' in result:
+                    if isinstance(result['created_at'], datetime):
+                        result['created_at'] = result['created_at'].isoformat()
+                if 'updated_at' in result:
+                    if isinstance(result['updated_at'], datetime):
+                        result['updated_at'] = result['updated_at'].isoformat()
+                if 'completed_at' in result:
+                    if isinstance(result['completed_at'], datetime):
+                        result['completed_at'] = result['completed_at'].isoformat()
+
             return results
         except Exception as e:
             print(f"Error finding user processing results: {e}")
@@ -145,9 +180,10 @@ class ProcessingResult:
         """Delete processing result and associated cloud files"""
         try:
             db = get_db()
-            
+
             # Get the result first to access cloudinary URLs
-            result = db.processing_results.find_one({'_id': ObjectId(result_id)})
+            result = db.processing_results.find_one(
+                {'_id': ObjectId(result_id)})
             if result:
                 # Delete from Cloudinary
                 try:
@@ -157,10 +193,11 @@ class ProcessingResult:
                         # Delete the entire folder for this job
                         job_id = result.get('job_id')
                         if job_id:
-                            cloudinary_service.delete_folder(f"luna_results/luna_job_{job_id}")
+                            cloudinary_service.delete_folder(
+                                f"luna_results/luna_job_{job_id}")
                 except Exception as e:
                     print(f"Error deleting Cloudinary files: {e}")
-                
+
                 # Delete from database
                 db.processing_results.delete_one({'_id': ObjectId(result_id)})
                 return True
@@ -174,7 +211,8 @@ class ProcessingResult:
         """Delete all results for a user"""
         try:
             db = get_db()
-            results = ProcessingResult.find_by_user_id(user_id, limit=1000)  # Get all results
+            results = ProcessingResult.find_by_user_id(
+                user_id, limit=1000)  # Get all results
 
             # Delete from Cloudinary
             try:
@@ -184,7 +222,8 @@ class ProcessingResult:
                     if cloudinary_urls:
                         job_id = result.get('job_id')
                         if job_id:
-                            cloudinary_service.delete_folder(f"luna_results/luna_job_{job_id}")
+                            cloudinary_service.delete_folder(
+                                f"luna_results/luna_job_{job_id}")
             except Exception as e:
                 print(f"Error deleting Cloudinary files: {e}")
 
@@ -298,6 +337,38 @@ class ProcessingResult:
             return True
         except Exception as e:
             print(f"Error updating analysis report: {e}")
+            return False
+
+    @staticmethod
+    def update_status(result_id: str, status: str, processing_info: dict = None,
+                      analysis_results: dict = None, cloudinary_urls: dict = None) -> bool:
+        """Update processing result status and data"""
+        try:
+            db = get_db()
+            update_data = {
+                'status': status,
+                'updated_at': datetime.utcnow().isoformat(),
+            }
+
+            if processing_info:
+                update_data['processing_info'] = processing_info
+
+            if analysis_results:
+                update_data['analysis_results'] = analysis_results
+
+            if cloudinary_urls:
+                update_data['cloudinary_urls'] = cloudinary_urls
+
+            if status == 'completed':
+                update_data['completed_at'] = datetime.utcnow().isoformat()
+
+            db.processing_results.update_one(
+                {'_id': ObjectId(result_id)},
+                {'$set': update_data}
+            )
+            return True
+        except Exception as e:
+            print(f"Error updating processing result: {e}")
             return False
 
     def to_dict(self):

@@ -15,6 +15,12 @@ def get_job_status(job_id):
     return StatusController.get_job_status(job_id)
 
 
+@status_bp.route('/processing-status/<job_id>', methods=['GET'])
+def get_processing_status(job_id):
+    """Get processing status for frontend polling"""
+    return StatusController.get_job_status(job_id)
+
+
 @status_bp.route('/<job_id>/detailed', methods=['GET'])
 def get_detailed_status(job_id):
     """Get detailed job status with processing steps"""

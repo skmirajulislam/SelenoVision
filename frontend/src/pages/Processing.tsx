@@ -29,7 +29,7 @@ interface ProcessingStatus {
 }
 
 const Processing: React.FC = () => {
-    const { user, token } = useAuth();
+    const { user, token, loading } = useAuth();
     const navigate = useNavigate();
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
@@ -79,11 +79,18 @@ const Processing: React.FC = () => {
     };
 
     const handleUpload = async () => {
-        if (!selectedFile || !token) return;
+        console.log('handleUpload called', { selectedFile: selectedFile?.name, token: !!token });
+
+        if (!selectedFile || !token) {
+            console.log('Upload cancelled: missing file or token', { selectedFile: !!selectedFile, token: !!token });
+            return;
+        }
 
         setIsUploading(true);
         const formData = new FormData();
-        formData.append('file', selectedFile);
+        formData.append('image', selectedFile);
+
+        console.log('FormData created, uploading file:', selectedFile.name, selectedFile.size, 'bytes');
 
         try {
             const response = await fetch(`${import.meta.env.VITE_API_URL}/api/upload`, {
@@ -93,6 +100,8 @@ const Processing: React.FC = () => {
                 },
                 body: formData,
             });
+
+            console.log('Upload response status:', response.status);
 
             if (response.ok) {
                 const data = await response.json();
@@ -117,7 +126,7 @@ const Processing: React.FC = () => {
     const pollProcessingStatus = async (jobId: string) => {
         const poll = async () => {
             try {
-                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/processing-status/${jobId}`, {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/status/${jobId}`, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                     },
@@ -185,8 +194,24 @@ const Processing: React.FC = () => {
         }
     };
 
+    useEffect(() => {
+        if (!loading && !user) {
+            navigate('/login');
+        }
+    }, [user, navigate, loading]);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-900 to-indigo-900 flex items-center justify-center">
+                <div className="text-center text-white">
+                    <Moon className="w-16 h-16 mx-auto mb-4 animate-pulse" />
+                    <p className="text-xl">Loading...</p>
+                </div>
+            </div>
+        );
+    }
+
     if (!user) {
-        navigate('/login');
         return null;
     }
 
@@ -253,8 +278,8 @@ const Processing: React.FC = () => {
                                             </div>
                                             <Button
                                                 onClick={handleUpload}
-                                                disabled={isUploading}
-                                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                disabled={isUploading || !selectedFile}
+                                                className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 {isUploading ? (
                                                     <>

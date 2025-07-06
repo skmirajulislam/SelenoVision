@@ -46,6 +46,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const fetchCurrentUser = useCallback(async (authToken: string) => {
     try {
+      console.log('Fetching current user with token:', authToken ? 'Present' : 'Missing');
+
       const response = await fetch(`${API_BASE}/api/profile`, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -53,18 +55,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         },
       });
 
+      console.log('Profile response status:', response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('User fetched successfully:', data.user?.username);
         setUser(data.user);
       } else {
         // Token is invalid, remove it
+        console.log('Profile fetch failed, removing token');
         Cookies.remove(STORAGE_KEYS.TOKEN);
         setToken(null);
+        setUser(null);
       }
     } catch (error) {
       console.error('Error fetching user:', error);
       Cookies.remove(STORAGE_KEYS.TOKEN);
       setToken(null);
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -73,16 +81,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     // Check for stored token on mount
     const storedToken = Cookies.get(STORAGE_KEYS.TOKEN);
+    console.log('Initializing auth, stored token:', storedToken ? 'Present' : 'Missing');
+
     if (storedToken) {
       setToken(storedToken);
       fetchCurrentUser(storedToken);
     } else {
+      console.log('No stored token found, setting loading to false');
       setLoading(false);
     }
   }, [fetchCurrentUser]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
+      console.log('Attempting login for:', email);
+
       const response = await fetch(`${API_BASE}/api/login`, {
         method: 'POST',
         headers: {
@@ -92,11 +105,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       const data = await response.json();
+      console.log('Login response:', { status: response.status, hasToken: !!data.access_token });
 
       if (response.ok) {
         setUser(data.user);
         setToken(data.access_token);
-        Cookies.set(STORAGE_KEYS.TOKEN, data.access_token, { expires: 7 }); // 7 days
+        // Set cookie with secure settings
+        Cookies.set(STORAGE_KEYS.TOKEN, data.access_token, {
+          expires: 7, // 7 days
+          secure: false, // Set to true in production with HTTPS
+          sameSite: 'lax'
+        });
+        console.log('Login successful, token stored');
         return true;
       } else {
         console.error('Login error:', data.error);
@@ -139,9 +159,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
+    console.log('Logging out user');
     setUser(null);
     setToken(null);
     Cookies.remove(STORAGE_KEYS.TOKEN);
+    // Also remove from localStorage if it exists
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    }
   };
 
   const deleteAccount = async (): Promise<boolean> => {

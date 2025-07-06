@@ -46,6 +46,45 @@ def create_results_zip(job_id: str, results_folder: str) -> str:
     return zip_path
 
 
+def cleanup_directory(directory: str):
+    """Clean up entire directory contents"""
+    import shutil
+    if os.path.exists(directory):
+        try:
+            shutil.rmtree(directory)
+            os.makedirs(directory, exist_ok=True)
+        except Exception as e:
+            print(f"Error cleaning up directory {directory}: {e}")
+
+
+def cleanup_user_files(user_id: str):
+    """Clean up files for a specific user from server directories"""
+    from database import get_db
+
+    try:
+        # Get user's processing results
+        db = get_db()
+        user_results = list(db.processing_results.find({'user_id': user_id}))
+
+        # Clean up server_results directory for this user
+        results_folder = 'server_results'
+        if os.path.exists(results_folder):
+            for result in user_results:
+                job_id = result.get('job_id')
+                if job_id:
+                    job_dir = os.path.join(results_folder, job_id)
+                    if os.path.exists(job_dir):
+                        try:
+                            import shutil
+                            shutil.rmtree(job_dir)
+                        except Exception as e:
+                            print(
+                                f"Error cleaning up job directory {job_dir}: {e}")
+
+    except Exception as e:
+        print(f"Error during user file cleanup: {e}")
+
+
 def cleanup_old_files(directory: str, max_age_hours: int = 24):
     """Clean up old files (for maintenance)"""
     import time

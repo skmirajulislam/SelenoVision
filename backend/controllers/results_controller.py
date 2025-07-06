@@ -159,8 +159,19 @@ class ResultsController:
         """Get all processing results for the current user"""
         try:
             current_user_id = get_jwt_identity()
+            print(f"Debug: current_user_id = {current_user_id}")
+
+            if not current_user_id:
+                return jsonify({
+                    "success": False,
+                    "error": "Authentication required"
+                }), 401
+
             results = ProcessingResult.find_by_user_id(
                 current_user_id, limit=100)
+
+            print(
+                f"Debug: Found {len(results)} results for user {current_user_id}")
 
             return jsonify({
                 "success": True,
@@ -168,6 +179,7 @@ class ResultsController:
                 "total": len(results)
             })
         except Exception as e:
+            print(f"Debug: Error in get_user_results: {e}")
             return jsonify({
                 "success": False,
                 "error": "Failed to retrieve results",

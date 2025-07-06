@@ -22,21 +22,24 @@ Author: Luna Photoclinometry Team for ISRO Lunar Mission Support
 Version: 3.0 - ISRO Mission Ready Edition
 """
 
+import warnings
+from typing import Any, Tuple, List, Optional, Dict
+from mpl_toolkits.mplot3d import Axes3D
+from tqdm import tqdm
+from scipy.ndimage import laplace, gaussian_filter
+from scipy.optimize import minimize
+import imageio.v2 as imageio
+from rasterio.control import GroundControlPoint
+import rasterio.transform
+import rasterio
+import matplotlib.pyplot as plt
 import os
 import glob
 import shutil
 import numpy as np
-import matplotlib.pyplot as plt
-import rasterio
-import rasterio.transform
-from rasterio.control import GroundControlPoint
-import imageio.v2 as imageio
-from scipy.optimize import minimize
-from scipy.ndimage import laplace, gaussian_filter
-from tqdm import tqdm
-from mpl_toolkits.mplot3d import Axes3D
-from typing import Any, Tuple, List, Optional, Dict
-import warnings
+import matplotlib
+# Set non-interactive backend to prevent GUI issues in background threads
+matplotlib.use('Agg')
 
 # Suppress warnings for cleaner output
 warnings.filterwarnings('ignore')

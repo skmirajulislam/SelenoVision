@@ -289,9 +289,11 @@ def get_dashboard_data():
         for result in recent_results:
             result["_id"] = str(result["_id"])
             if "created_at" in result:
-                result["created_at"] = result["created_at"].isoformat()
+                if isinstance(result["created_at"], datetime):
+                    result["created_at"] = result["created_at"].isoformat()
             if "updated_at" in result:
-                result["updated_at"] = result["updated_at"].isoformat()
+                if isinstance(result["updated_at"], datetime):
+                    result["updated_at"] = result["updated_at"].isoformat()
 
         # Get statistics
         total_results = db.processing_results.count_documents(
@@ -324,95 +326,6 @@ def get_dashboard_data():
     except Exception as e:
         print(f"Get dashboard error: {e}")
         return jsonify({'error': 'Failed to get dashboard data'}), 500
-
-
-@auth_bp.route('/results', methods=['GET'])
-@jwt_required()
-def get_user_results():
-    """Get all user's processing results with pagination"""
-    try:
-        user_id = get_jwt_identity()
-        user = User.find_by_id(user_id)
-
-        if not user:
-            return jsonify({'error': 'User not found'}), 404
-
-        # Get pagination parameters
-        page = int(request.args.get('page', 1))
-        limit = int(request.args.get('limit', 20))
-        status_filter = request.args.get('status')
-
-        from database import get_db
-        db = get_db()
-
-        # Build query
-        query = {"user_id": user_id}
-        if status_filter and status_filter in ['completed', 'processing', 'failed', 'pending']:
-            query["status"] = status_filter
-
-        # Get total count
-        total_count = db.processing_results.count_documents(query)
-
-        # Get paginated results
-        skip = (page - 1) * limit
-        results = list(db.processing_results.find(query)
-                       .sort("created_at", -1)
-                       .skip(skip)
-                       .limit(limit))
-
-        # Convert ObjectId to string for JSON serialization
-        for result in results:
-            result["_id"] = str(result["_id"])
-            if "created_at" in result:
-                result["created_at"] = result["created_at"].isoformat()
-            if "updated_at" in result:
-                result["updated_at"] = result["updated_at"].isoformat()
-
-        return jsonify({
-            'results': results,
-            'pagination': {
-                'page': page,
-                'limit': limit,
-                'total': total_count,
-                'pages': (total_count + limit - 1) // limit
-            }
-        }), 200
-
-    except Exception as e:
-        print(f"Get results error: {e}")
-        return jsonify({'error': 'Failed to get results'}), 500
-
-
-@auth_bp.route('/results/<result_id>', methods=['DELETE'])
-@jwt_required()
-def delete_result(result_id):
-    """Delete a specific processing result"""
-    try:
-        user_id = get_jwt_identity()
-
-        from database import get_db
-        from bson import ObjectId
-        db = get_db()
-
-        # Check if result exists and belongs to user
-        result = db.processing_results.find_one({
-            "_id": ObjectId(result_id),
-            "user_id": user_id
-        })
-
-        if not result:
-            return jsonify({'error': 'Result not found'}), 404
-
-        # Delete from database
-        db.processing_results.delete_one({"_id": ObjectId(result_id)})
-
-        # TODO: Delete associated files from Cloudinary if needed
-
-        return jsonify({'message': 'Result deleted successfully'}), 200
-
-    except Exception as e:
-        print(f"Delete result error: {e}")
-        return jsonify({'error': 'Failed to delete result'}), 500
 
 
 @auth_bp.route('/debug/users', methods=['GET'])

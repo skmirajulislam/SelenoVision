@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Progress } from '../components/ui/progress';
 import { toast } from 'sonner';
 import axios from 'axios';
+import Cookies from 'js-cookie';
+import { API_CONFIG, STORAGE_KEYS } from '../config/constants';
 
 interface UploadStatus {
     uploading: boolean;
@@ -20,7 +22,7 @@ interface UploadStatus {
 
 const Upload = () => {
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, isAuthenticated, loading: authLoading } = useAuth();
     const [uploadStatus, setUploadStatus] = useState<UploadStatus>({
         uploading: false,
         processing: false,
@@ -30,6 +32,15 @@ const Upload = () => {
         jobId: null,
     });
 
+    // Redirect to login if not authenticated
+    useEffect(() => {
+        if (!authLoading && !isAuthenticated) {
+            console.log('🔒 User not authenticated, redirecting to login');
+            navigate('/login');
+            return;
+        }
+    }, [authLoading, isAuthenticated, navigate]);
+
     const pollProcessingStatus = useCallback(async (jobId: string) => {
         const maxAttempts = 120; // 10 minutes with 5-second intervals
         let attempts = 0;
@@ -37,10 +48,10 @@ const Upload = () => {
         const poll = async () => {
             try {
                 const response = await axios.get(
-                    `${import.meta.env.VITE_API_URL}/api/processing-status/${jobId}`,
+                    `${API_CONFIG.BASE_URL}/api/status/${jobId}`,
                     {
                         headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                            'Authorization': `Bearer ${Cookies.get(STORAGE_KEYS.TOKEN)}`
                         }
                     }
                 );
@@ -121,12 +132,12 @@ const Upload = () => {
             formData.append('file', file);
 
             const response = await axios.post(
-                `${import.meta.env.VITE_API_URL}/api/upload`,
+                `${API_CONFIG.BASE_URL}/api/upload`,
                 formData,
                 {
                     headers: {
                         'Content-Type': 'multipart/form-data',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        'Authorization': `Bearer ${Cookies.get(STORAGE_KEYS.TOKEN)}`
                     },
                     onUploadProgress: (progressEvent) => {
                         const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total!);
