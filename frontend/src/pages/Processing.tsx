@@ -1,91 +1,56 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { Button } from '../components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Progress } from '../components/ui/progress';
-import { Badge } from '../components/ui/badge';
-import { Alert, AlertDescription } from '../components/ui/alert';
-import { toast } from 'sonner';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 import {
     Upload,
     FileImage,
-    Moon,
-    Zap,
     CheckCircle,
-    XCircle,
-    Loader,
     AlertCircle,
-    ArrowLeft,
-    Download,
-    Eye
+    Moon,
+    Rocket,
+    Sparkles,
+    Download
 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
-interface ProcessingJob {
-    job_id: string;
-    status: 'pending' | 'processing' | 'completed' | 'failed';
-    filename: string;
-    progress: number;
-    message: string;
-    result_url?: string;
+interface ProcessingStatus {
+    status: 'queued' | 'processing' | 'completed' | 'failed';
+    progress?: number;
+    step?: string;
+    result_id?: string;
+    error_message?: string;
 }
 
 const Processing: React.FC = () => {
-    const { user } = useAuth();
+    const { user, token } = useAuth();
     const navigate = useNavigate();
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [dragOver, setDragOver] = useState(false);
-    const [uploading, setUploading] = useState(false);
-    const [currentJob, setCurrentJob] = useState<ProcessingJob | null>(null);
-    const [processingHistory, setProcessingHistory] = useState<ProcessingJob[]>([]);
+    const [isUploading, setIsUploading] = useState(false);
+    const [jobId, setJobId] = useState<string | null>(null);
+    const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
+    const [showCompletion, setShowCompletion] = useState(false);
 
-    useEffect(() => {
-        // Poll for job status if there's an active job
-        let interval: NodeJS.Timeout;
-        if (currentJob && (currentJob.status === 'pending' || currentJob.status === 'processing')) {
-            interval = setInterval(() => {
-                checkJobStatus(currentJob.job_id);
-            }, 3000);
-        }
-        return () => clearInterval(interval);
-    }, [currentJob]);
-
-    const checkJobStatus = async (jobId: string) => {
-        try {
-            const response = await fetch(`http://localhost:5000/api/status/${jobId}`);
-            if (response.ok) {
-                const data = await response.json();
-                setCurrentJob(prev => prev ? { ...prev, ...data } : null);
-
-                if (data.status === 'completed' || data.status === 'failed') {
-                    setProcessingHistory(prev => [data, ...prev.filter(job => job.job_id !== jobId)]);
-                    if (data.status === 'completed') {
-                        toast.success('Processing completed successfully!');
-                    } else {
-                        toast.error('Processing failed. Please try again.');
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Error checking job status:', error);
-        }
-    };
-
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
+    const onDrop = useCallback((acceptedFiles: File[]) => {
+        if (acceptedFiles.length > 0) {
+            const file = acceptedFiles[0];
             validateAndSetFile(file);
         }
-    };
+    }, []);
 
-    const handleFileDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        setDragOver(false);
-        const file = e.dataTransfer.files[0];
-        if (file) {
-            validateAndSetFile(file);
-        }
-    };
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+        onDrop,
+        accept: {
+            'image/*': ['.png', '.jpg', '.jpeg', '.tiff', '.tif']
+        },
+        maxFiles: 1,
+        maxSize: 50 * 1024 * 1024 // 50MB
+    });
 
     const validateAndSetFile = (file: File) => {
         const allowedTypes = ['image/png', 'image/jpeg', 'image/tiff', 'image/tif'];
@@ -102,26 +67,25 @@ const Processing: React.FC = () => {
         }
 
         setSelectedFile(file);
+        toast.success('File selected successfully!');
+    };
+
+    const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            validateAndSetFile(file);
+        }
     };
 
     const handleUpload = async () => {
-        if (!selectedFile) {
-            toast.error('Please select a file first');
-            return;
-        }
+        if (!selectedFile || !token) return;
 
-        setUploading(true);
+        setIsUploading(true);
+        const formData = new FormData();
+        formData.append('file', selectedFile);
 
         try {
-            const formData = new FormData();
-            formData.append('image', selectedFile);
-
-            const token = document.cookie
-                .split('; ')
-                .find(row => row.startsWith('token='))
-                ?.split('=')[1];
-
-            const response = await fetch('http://localhost:5000/api/upload', {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/upload`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -131,49 +95,92 @@ const Processing: React.FC = () => {
 
             if (response.ok) {
                 const data = await response.json();
-                setCurrentJob({
-                    job_id: data.job_id,
-                    status: data.status,
-                    filename: selectedFile.name,
-                    progress: 0,
-                    message: data.message
-                });
-                setSelectedFile(null);
-                toast.success('Upload successful! Processing started.');
+                setJobId(data.job_id);
+                setProcessingStatus({ status: 'queued' });
+                toast.success('Upload successful! Processing started...');
+
+                // Start polling for status
+                pollProcessingStatus(data.job_id);
             } else {
                 const errorData = await response.json();
                 toast.error(errorData.error || 'Upload failed');
             }
         } catch (error) {
-            toast.error('Network error during upload');
+            console.error('Upload error:', error);
+            toast.error('Upload failed. Please try again.');
         } finally {
-            setUploading(false);
+            setIsUploading(false);
         }
     };
 
-    const getStatusIcon = (status: string) => {
-        switch (status) {
-            case 'completed':
-                return <CheckCircle className="h-5 w-5 text-green-500" />;
-            case 'failed':
-                return <XCircle className="h-5 w-5 text-red-500" />;
-            case 'processing':
-                return <Loader className="h-5 w-5 text-blue-500 animate-spin" />;
-            default:
-                return <AlertCircle className="h-5 w-5 text-yellow-500" />;
+    const pollProcessingStatus = async (jobId: string) => {
+        const poll = async () => {
+            try {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/processing-status/${jobId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                    },
+                });
+
+                if (response.ok) {
+                    const status: ProcessingStatus = await response.json();
+                    setProcessingStatus(status);
+
+                    if (status.status === 'completed') {
+                        setShowCompletion(true);
+                        toast.success('Processing completed successfully!');
+                        return; // Stop polling
+                    } else if (status.status === 'failed') {
+                        toast.error(status.error_message || 'Processing failed');
+                        return; // Stop polling
+                    }
+                }
+            } catch (error) {
+                console.error('Error polling status:', error);
+            }
+
+            // Continue polling if still processing
+            if (processingStatus?.status === 'processing' || processingStatus?.status === 'queued') {
+                setTimeout(poll, 2000); // Poll every 2 seconds
+            }
+        };
+
+        poll();
+    };
+
+    const getProgressValue = () => {
+        if (!processingStatus) return 0;
+
+        switch (processingStatus.status) {
+            case 'queued': return 10;
+            case 'processing': return processingStatus.progress || 50;
+            case 'completed': return 100;
+            case 'failed': return 0;
+            default: return 0;
         }
     };
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'completed':
-                return 'bg-green-100 text-green-800 border-green-200';
-            case 'failed':
-                return 'bg-red-100 text-red-800 border-red-200';
-            case 'processing':
-                return 'bg-blue-100 text-blue-800 border-blue-200';
-            default:
-                return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    const getStatusColor = () => {
+        if (!processingStatus) return 'bg-gray-500';
+
+        switch (processingStatus.status) {
+            case 'queued': return 'bg-yellow-500';
+            case 'processing': return 'bg-blue-500';
+            case 'completed': return 'bg-green-500';
+            case 'failed': return 'bg-red-500';
+            default: return 'bg-gray-500';
+        }
+    };
+
+    const getStatusIcon = () => {
+        if (!processingStatus) return <Upload className="w-4 h-4" />;
+
+        switch (processingStatus.status) {
+            case 'queued': return <Moon className="w-4 h-4 animate-pulse" />;
+            case 'processing': return <Rocket className="w-4 h-4 animate-bounce" />;
+            case 'completed': return <CheckCircle className="w-4 h-4" />;
+            case 'failed': return <AlertCircle className="w-4 h-4" />;
+            default: return <Upload className="w-4 h-4" />;
         }
     };
 
@@ -183,198 +190,123 @@ const Processing: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
+        <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-900 to-indigo-900 p-6">
             <div className="max-w-4xl mx-auto">
                 {/* Header */}
-                <div className="mb-8">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <Button
-                                onClick={() => navigate('/dashboard')}
-                                variant="outline"
-                                size="sm"
-                                className="border-slate-600 text-slate-300 hover:bg-slate-800"
-                            >
-                                <ArrowLeft className="h-4 w-4 mr-2" />
-                                Back to Dashboard
-                            </Button>
-                        </div>
-                    </div>
-                    <div className="mt-4">
-                        <div className="flex items-center gap-4">
-                            <div className="bg-purple-600 rounded-full p-3">
-                                <Moon className="h-8 w-8 text-white" />
-                            </div>
-                            <div>
-                                <h1 className="text-3xl font-bold text-white">Lunar Image Processing</h1>
-                                <p className="text-slate-300">Upload lunar images for advanced photoclinometry analysis</p>
-                            </div>
-                        </div>
-                    </div>
+                <div className="mb-8 text-center">
+                    <h1 className="text-4xl font-bold text-white mb-2 flex items-center justify-center gap-3">
+                        <Rocket className="w-10 h-10 text-blue-400" />
+                        Lunar Image Processing
+                    </h1>
+                    <p className="text-gray-300">Upload a lunar surface image to generate high-resolution DEMs</p>
                 </div>
 
                 {/* Upload Section */}
-                <Card className="bg-slate-800/50 border-slate-700 mb-8">
-                    <CardHeader>
-                        <CardTitle className="text-white flex items-center gap-2">
-                            <Upload className="h-5 w-5" />
-                            Upload Lunar Image
-                        </CardTitle>
-                        <CardDescription className="text-slate-300">
-                            Select a high-resolution lunar image for Digital Elevation Model generation
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-6">
-                            {/* File Upload Area */}
+                {!jobId && (
+                    <Card className="bg-gradient-to-br from-slate-900/50 to-slate-800/50 border-slate-400/20 mb-8">
+                        <CardHeader>
+                            <CardTitle className="text-white">Upload Lunar Image</CardTitle>
+                        </CardHeader>
+                        <CardContent>
                             <div
-                                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragOver
-                                        ? 'border-blue-500 bg-blue-500/10'
-                                        : 'border-slate-600 hover:border-slate-500'
+                                {...getRootProps()}
+                                className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${isDragActive
+                                        ? 'border-blue-400 bg-blue-900/20'
+                                        : 'border-gray-400 hover:border-blue-400 hover:bg-blue-900/10'
                                     }`}
-                                onDragOver={(e) => {
-                                    e.preventDefault();
-                                    setDragOver(true);
-                                }}
-                                onDragLeave={() => setDragOver(false)}
-                                onDrop={handleFileDrop}
                             >
-                                <FileImage className="h-16 w-16 text-slate-400 mx-auto mb-4" />
-                                <div className="space-y-2">
-                                    <h3 className="text-lg font-semibold text-white">
-                                        {selectedFile ? selectedFile.name : 'Drop your image here or click to browse'}
-                                    </h3>
-                                    <p className="text-slate-400">
-                                        Supports PNG, JPEG, and TIFF formats up to 50MB
-                                    </p>
+                                <input {...getInputProps()} />
+                                <div className="flex flex-col items-center gap-4">
+                                    <FileImage className="w-16 h-16 text-gray-400" />
+                                    {isDragActive ? (
+                                        <p className="text-blue-400 text-lg">Drop the lunar image here...</p>
+                                    ) : (
+                                        <div>
+                                            <p className="text-white text-lg mb-2">
+                                                Drag & drop a lunar image here, or click to select
+                                            </p>
+                                            <p className="text-gray-400 text-sm">
+                                                Supports PNG, JPEG, TIFF (max 50MB)
+                                            </p>
+                                            <p className="text-gray-500 text-xs mt-2">
+                                                Compatible with Chandrayaan, LRO, and Selene mission data
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
-                                <input
-                                    type="file"
-                                    accept="image/png,image/jpeg,image/tiff,.tif"
-                                    onChange={handleFileSelect}
-                                    className="hidden"
-                                    id="file-input"
-                                />
-                                <label htmlFor="file-input">
-                                    <Button
-                                        variant="outline"
-                                        className="mt-4 border-slate-600 text-slate-300 hover:bg-slate-700"
-                                        asChild
-                                    >
-                                        <span>Browse Files</span>
-                                    </Button>
-                                </label>
                             </div>
 
-                            {/* File Info */}
                             {selectedFile && (
-                                <div className="bg-slate-700/30 rounded-lg p-4">
+                                <div className="mt-6 p-4 bg-slate-800/30 rounded-lg">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <FileImage className="h-8 w-8 text-blue-400" />
+                                            <FileImage className="w-8 h-8 text-blue-400" />
                                             <div>
                                                 <p className="text-white font-medium">{selectedFile.name}</p>
-                                                <p className="text-slate-400 text-sm">
+                                                <p className="text-gray-400 text-sm">
                                                     {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
                                                 </p>
                                             </div>
                                         </div>
                                         <Button
-                                            onClick={() => setSelectedFile(null)}
-                                            variant="outline"
-                                            size="sm"
-                                            className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                                            onClick={handleUpload}
+                                            disabled={isUploading}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white"
                                         >
-                                            Remove
+                                            {isUploading ? (
+                                                <>
+                                                    <Moon className="w-4 h-4 mr-2 animate-spin" />
+                                                    Uploading...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Upload className="w-4 h-4 mr-2" />
+                                                    Start Processing
+                                                </>
+                                            )}
                                         </Button>
                                     </div>
                                 </div>
                             )}
+                        </CardContent>
+                    </Card>
+                )}
 
-                            {/* Processing Info */}
-                            <Alert className="bg-blue-950/30 border-blue-900/50">
-                                <Zap className="h-4 w-4 text-blue-400" />
-                                <AlertDescription className="text-blue-200">
-                                    <strong>Processing includes:</strong> Shape-from-Shading photoclinometry,
-                                    DEM generation, surface analysis, slope/aspect mapping, and quality assessment.
-                                    Processing typically takes 2-5 minutes depending on image complexity.
-                                </AlertDescription>
-                            </Alert>
-
-                            {/* Upload Button */}
-                            <Button
-                                onClick={handleUpload}
-                                disabled={!selectedFile || uploading}
-                                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-                                size="lg"
-                            >
-                                {uploading ? (
-                                    <>
-                                        <Loader className="h-4 w-4 mr-2 animate-spin" />
-                                        Uploading...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Upload className="h-4 w-4 mr-2" />
-                                        Start Processing
-                                    </>
-                                )}
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Current Processing Job */}
-                {currentJob && (
-                    <Card className="bg-slate-800/50 border-slate-700 mb-8">
+                {/* Processing Status */}
+                {processingStatus && (
+                    <Card className="bg-gradient-to-br from-purple-900/50 to-indigo-900/50 border-purple-400/20 mb-8">
                         <CardHeader>
                             <CardTitle className="text-white flex items-center gap-2">
-                                {getStatusIcon(currentJob.status)}
-                                Current Processing
+                                <Moon className="w-6 h-6 text-blue-400" />
+                                Processing Status
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-white font-medium">{currentJob.filename}</p>
-                                        <p className="text-slate-400 text-sm">{currentJob.message}</p>
-                                    </div>
-                                    <Badge className={getStatusColor(currentJob.status)}>
-                                        {currentJob.status.charAt(0).toUpperCase() + currentJob.status.slice(1)}
+                                    <Badge className={`${getStatusColor()} text-white`}>
+                                        <div className="flex items-center gap-1">
+                                            {getStatusIcon()}
+                                            {processingStatus.status}
+                                        </div>
                                     </Badge>
+                                    <span className="text-white text-sm">
+                                        {getProgressValue()}%
+                                    </span>
                                 </div>
 
-                                {currentJob.status === 'processing' && (
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-slate-400">Progress</span>
-                                            <span className="text-white">{currentJob.progress}%</span>
-                                        </div>
-                                        <Progress value={currentJob.progress} className="h-2" />
-                                    </div>
+                                <Progress value={getProgressValue()} className="w-full" />
+
+                                {processingStatus.step && (
+                                    <p className="text-gray-300 text-sm">
+                                        Current step: {processingStatus.step}
+                                    </p>
                                 )}
 
-                                {currentJob.status === 'completed' && currentJob.result_url && (
-                                    <div className="flex gap-2">
-                                        <Button
-                                            onClick={() => window.open(currentJob.result_url, '_blank')}
-                                            variant="outline"
-                                            size="sm"
-                                            className="border-slate-600 text-slate-300 hover:bg-slate-700"
-                                        >
-                                            <Eye className="h-4 w-4 mr-2" />
-                                            View Result
-                                        </Button>
-                                        <Button
-                                            onClick={() => navigate('/dashboard')}
-                                            variant="outline"
-                                            size="sm"
-                                            className="border-slate-600 text-slate-300 hover:bg-slate-700"
-                                        >
-                                            <Download className="h-4 w-4 mr-2" />
-                                            Go to Dashboard
-                                        </Button>
+                                {processingStatus.status === 'processing' && (
+                                    <div className="flex items-center gap-2 text-blue-400">
+                                        <Sparkles className="w-4 h-4 animate-pulse" />
+                                        <span className="text-sm">Analyzing lunar surface features...</span>
                                     </div>
                                 )}
                             </div>
@@ -382,36 +314,56 @@ const Processing: React.FC = () => {
                     </Card>
                 )}
 
-                {/* Processing Requirements */}
-                <Card className="bg-slate-800/50 border-slate-700">
-                    <CardHeader>
-                        <CardTitle className="text-white">Processing Requirements & Tips</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <h3 className="text-white font-semibold mb-3">Image Requirements</h3>
-                                <ul className="space-y-2 text-slate-300 text-sm">
-                                    <li>• High-resolution lunar surface images</li>
-                                    <li>• Clear topographic features and shadows</li>
-                                    <li>• Formats: PNG, JPEG, TIFF</li>
-                                    <li>• Maximum file size: 50MB</li>
-                                    <li>• Minimum resolution: 1024x1024px</li>
-                                </ul>
-                            </div>
-                            <div>
-                                <h3 className="text-white font-semibold mb-3">Best Results</h3>
-                                <ul className="space-y-2 text-slate-300 text-sm">
-                                    <li>• Images with varied illumination</li>
-                                    <li>• Clear crater and ridge features</li>
-                                    <li>• Avoid heavily saturated images</li>
-                                    <li>• Multiple viewing angles for same area</li>
-                                    <li>• High contrast surface features</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                {/* Completion Animation */}
+                <AnimatePresence>
+                    {showCompletion && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            className="fixed inset-0 flex items-center justify-center bg-black/50 z-50"
+                        >
+                            <Card className="bg-gradient-to-br from-green-900/90 to-emerald-900/90 border-green-400/20 p-8 max-w-md mx-4">
+                                <CardContent className="text-center">
+                                    <motion.div
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{ delay: 0.2 }}
+                                    >
+                                        <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
+                                    </motion.div>
+                                    <h3 className="text-2xl font-bold text-white mb-2">
+                                        Processing Complete!
+                                    </h3>
+                                    <p className="text-green-200 mb-6">
+                                        Your lunar DEM has been successfully generated
+                                    </p>
+                                    <div className="flex gap-3 justify-center">
+                                        <Button
+                                            onClick={() => navigate('/dashboard')}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                                        >
+                                            <Download className="w-4 h-4 mr-2" />
+                                            View Results
+                                        </Button>
+                                        <Button
+                                            onClick={() => {
+                                                setShowCompletion(false);
+                                                setJobId(null);
+                                                setProcessingStatus(null);
+                                                setSelectedFile(null);
+                                            }}
+                                            variant="outline"
+                                            className="border-green-400/20 text-green-400 hover:bg-green-800/30"
+                                        >
+                                            Process Another
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </div>
     );

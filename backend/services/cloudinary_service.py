@@ -7,6 +7,8 @@ import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 from dotenv import load_dotenv
+from PIL import Image
+import tempfile
 
 load_dotenv()
 
@@ -22,6 +24,97 @@ class CloudinaryService:
             api_secret=os.getenv('CLOUDINARY_API_SECRET')
         )
         self.folder_prefix = "luna_results"
+
+    def compress_image_if_needed(self, file_path: str, max_size_mb: int = 8) -> str:
+        """Compress image if it exceeds size limit"""
+        file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+
+        if file_size_mb <= max_size_mb:
+            return file_path
+
+        # Create temporary compressed file
+        temp_dir = tempfile.mkdtemp()
+        compressed_path = os.path.join(
+            temp_dir, f"compressed_{os.path.basename(file_path)}")
+
+        try:
+            with Image.open(file_path) as img:
+                # Calculate compression ratio
+                ratio = max_size_mb / file_size_mb
+                quality = max(20, min(95, int(85 * ratio)))
+
+                # Save compressed version
+                img.save(compressed_path, optimize=True, quality=quality)
+                return compressed_path
+        except Exception as e:
+            print(f"Error compressing image: {e}")
+            return file_path
+
+    def upload_file_with_compression(self, file_path: str, folder: str, resource_type: str = "auto") -> str:
+        """Upload file to Cloudinary with compression if needed"""
+        try:
+            # Compress large images
+            if resource_type == "image" or file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
+                compressed_path = self.compress_image_if_needed(file_path)
+                upload_path = compressed_path
+            else:
+                upload_path = file_path
+
+            result = cloudinary.uploader.upload(
+                upload_path,
+                folder=folder,
+                resource_type=resource_type,
+                overwrite=True,
+                invalidate=True
+            )
+
+            # Clean up temporary compressed file
+            if upload_path != file_path and os.path.exists(upload_path):
+                os.remove(upload_path)
+
+            return result['secure_url']
+        except Exception as e:
+            print(f"Error uploading file to Cloudinary: {e}")
+            return ""
+
+    def upload_processing_results(self, job_id: str, files_dict: dict) -> dict:
+        """Upload all processing result files with proper structure"""
+        cloudinary_urls = {}
+        base_folder = f"luna_results/luna_job_{job_id}"
+
+        # Define file mappings with compression settings
+        file_mappings = {
+            'original_image': {'resource_type': 'image', 'compress': True},
+            'dem_geotiff': {'resource_type': 'raw', 'compress': False},
+            'obj_model': {'resource_type': 'raw', 'compress': False},
+            'visualization': {'resource_type': 'image', 'compress': True},
+            'aspect_analysis': {'resource_type': 'image', 'compress': True},
+            'slope_analysis': {'resource_type': 'image', 'compress': True},
+            'contour_lines': {'resource_type': 'image', 'compress': True},
+            'quality_report': {'resource_type': 'image', 'compress': True},
+            'processing_log': {'resource_type': 'raw', 'compress': False}
+        }
+
+        for key, file_path in files_dict.items():
+            if file_path and os.path.exists(file_path):
+                mapping = file_mappings.get(
+                    key, {'resource_type': 'auto', 'compress': False})
+                folder = f"{base_folder}/{key}"
+
+                # Upload with appropriate settings
+                url = self.upload_file_with_compression(
+                    file_path,
+                    folder,
+                    mapping['resource_type']
+                )
+
+                if url:
+                    cloudinary_urls[key] = url
+                    print(f"✅ Uploaded {key}: {url}")
+                else:
+                    print(f"❌ Failed to upload {key}")
+
+        return cloudinary_urls
 
     def upload_file(self, file_path, public_id=None, folder=None):
         """Upload a file to Cloudinary"""

@@ -3,6 +3,9 @@ Authentication routes for Luna Photoclinometry Server
 Handle user registration, login, and account management
 """
 
+import os
+import json
+from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from models.user import User
@@ -436,3 +439,168 @@ def clear_test_users():
         return jsonify({"message": f"Deleted {result.deleted_count} users"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@auth_bp.route('/analyze-result/<result_id>', methods=['POST'])
+@jwt_required()
+def analyze_result_with_ai(result_id):
+    """Analyze processing result using Gemini AI"""
+    try:
+        user_id = get_jwt_identity()
+
+        from database import get_db
+        from bson import ObjectId
+        db = get_db()
+
+        # Check if result exists and belongs to user
+        result = db.processing_results.find_one({
+            "_id": ObjectId(result_id),
+            "user_id": user_id
+        })
+
+        if not result:
+            return jsonify({'error': 'Result not found'}), 404
+
+        # Get Gemini API key from request
+        data = request.get_json()
+        gemini_api_key = data.get('gemini_api_key')
+
+        if not gemini_api_key:
+            return jsonify({'error': 'Gemini API key is required'}), 400
+
+        # Try to find analysis files
+        analysis_report_path = f"server_results/{result['job_id']}/analysis/analysis_report.txt"
+        detailed_analysis_path = f"server_results/{result['job_id']}/analysis/detailed_analysis.json"
+
+        analysis_text = ""
+        detailed_data = {}
+
+        # Read analysis report
+        if os.path.exists(analysis_report_path):
+            with open(analysis_report_path, 'r') as f:
+                analysis_text = f.read()
+
+        # Read detailed analysis
+        if os.path.exists(detailed_analysis_path):
+            with open(detailed_analysis_path, 'r') as f:
+                import json
+                detailed_data = json.load(f)
+
+        if not analysis_text and not detailed_data:
+            return jsonify({'error': 'Analysis files not found'}), 404
+
+        # Use Gemini to analyze
+        try:
+            import google.generativeai as genai
+
+            genai.configure(api_key=gemini_api_key)
+            model = genai.GenerativeModel('gemini-pro')
+
+            prompt = f"""
+            As a lunar surface analysis expert, please analyze the following data from a Shape-from-Shading photoclinometry processing result:
+
+            ANALYSIS REPORT:
+            {analysis_text}
+
+            DETAILED DATA:
+            {json.dumps(detailed_data, indent=2)}
+
+            Please provide a comprehensive analysis in JSON format with the following structure:
+            {{
+                "summary": "Brief summary of the lunar surface analysis",
+                "key_findings": ["finding 1", "finding 2", "..."],
+                "quality_assessment": {{
+                    "overall_score": "score out of 100",
+                    "quality_description": "description of quality",
+                    "strengths": ["strength 1", "strength 2"],
+                    "limitations": ["limitation 1", "limitation 2"]
+                }},
+                "geological_features": {{
+                    "craters": "description of crater features",
+                    "ridges": "description of ridge features",
+                    "terrain": "general terrain description"
+                }},
+                "mission_suitability": {{
+                    "landing_sites": "assessment of potential landing sites",
+                    "navigation": "navigation considerations",
+                    "scientific_value": "scientific research value"
+                }},
+                "recommendations": ["recommendation 1", "recommendation 2", "..."]
+            }}
+
+            Make it detailed and scientifically accurate.
+            """
+
+            response = model.generate_content(prompt)
+            ai_analysis = response.text
+
+            # Try to parse as JSON, fallback to text if needed
+            try:
+                ai_analysis_json = json.loads(ai_analysis)
+            except:
+                # If not valid JSON, wrap in a structure
+                ai_analysis_json = {
+                    "summary": "AI analysis completed",
+                    "analysis_text": ai_analysis,
+                    "key_findings": ["Analysis provided in text format"],
+                    "quality_assessment": {
+                        "overall_score": "Analysis pending",
+                        "quality_description": "See full analysis text"
+                    }
+                }
+
+            # Update the result with AI analysis
+            db.processing_results.update_one(
+                {"_id": ObjectId(result_id)},
+                {"$set": {"ai_analysis": ai_analysis_json,
+                          "updated_at": datetime.utcnow()}})
+
+            return jsonify({
+                'message': 'Analysis submitted successfully',
+                'ai_analysis': ai_analysis_json
+            }), 200
+
+        except Exception as e:
+            return jsonify({'error': f'AI analysis error: {e}'}), 500
+
+    except Exception as e:
+        print(f"Analyze result error: {e}")
+        return jsonify({'error': 'Failed to analyze result'}), 500
+
+
+@auth_bp.route('/chat', methods=['POST'])
+def chat():
+    """Lunar chatbot endpoint"""
+    try:
+        data = request.get_json()
+        message = data.get('message')
+        api_key = data.get('api_key')
+
+        if not message or not api_key:
+            return jsonify({"error": "Message and API key required"}), 400
+
+        # Initialize Gemini service
+        from services.gemini_service import GeminiService
+        gemini = GeminiService()
+
+        if not gemini.initialize_gemini(api_key):
+            return jsonify({"error": "Failed to initialize Gemini API"}), 500
+
+        # Create lunar-focused prompt
+        prompt = f"""
+        You are a knowledgeable lunar and space science assistant. Answer questions about the Moon, Solar System, and Universe with scientific accuracy.
+        
+        User question: {message}
+        
+        Please provide a helpful, accurate, and engaging response about space science, lunar geology, astronomy, or related topics.
+        Keep the response concise but informative.
+        """
+
+        try:
+            response = gemini.model.generate_content(prompt)
+            return jsonify({"response": response.text}), 200
+        except Exception as e:
+            return jsonify({"error": f"Failed to generate response: {str(e)}"}), 500
+
+    except Exception as e:
+        return jsonify({"error": f"Chat failed: {str(e)}"}), 500

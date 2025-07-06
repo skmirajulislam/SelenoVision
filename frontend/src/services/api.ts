@@ -1,4 +1,3 @@
-
 const API_BASE_URL = 'http://localhost:5000';
 
 export interface ApiResponse<T> {
@@ -42,9 +41,9 @@ export const api = {
   uploadFile: async (file: File): Promise<ApiResponse<{ job_id: string }>> => {
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('image', file); // <-- use 'image' not 'file'
 
-      const response = await fetch(`${API_BASE_URL}/api/upload/process`, {
+      const response = await fetch(`${API_BASE_URL}/api/upload/process`, { // <-- correct endpoint
         method: 'POST',
         body: formData,
       });
@@ -57,9 +56,9 @@ export const api = {
       return { success: true, data };
     } catch (error) {
       console.error('Upload error:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Upload failed' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Upload failed'
       };
     }
   },
@@ -68,7 +67,7 @@ export const api = {
   getJobStatus: async (jobId: string): Promise<ApiResponse<JobStatus>> => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/status/${jobId}`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -77,9 +76,9 @@ export const api = {
       return { success: true, data };
     } catch (error) {
       console.error('Status check error:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to get status' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get status'
       };
     }
   },
@@ -88,7 +87,7 @@ export const api = {
   getJobResults: async (jobId: string): Promise<ApiResponse<JobResult>> => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/results/${jobId}/summary`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -97,9 +96,9 @@ export const api = {
       return { success: true, data };
     } catch (error) {
       console.error('Results fetch error:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to get results' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get results'
       };
     }
   },
@@ -108,7 +107,7 @@ export const api = {
   downloadZip: async (jobId: string): Promise<Blob | null> => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/results/${jobId}/download`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -124,7 +123,7 @@ export const api = {
   downloadFile: async (jobId: string, filename: string): Promise<Blob | null> => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/results/${jobId}/files/${filename}`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -140,7 +139,7 @@ export const api = {
   healthCheck: async (): Promise<ApiResponse<{ status: string }>> => {
     try {
       const response = await fetch(`${API_BASE_URL}/health`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -149,10 +148,11 @@ export const api = {
       return { success: true, data };
     } catch (error) {
       console.error('Health check error:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Health check failed' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Health check failed'
       };
     }
   }
 };
+
