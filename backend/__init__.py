@@ -44,12 +44,24 @@ def create_app():
     CORS(app, origins=[os.getenv('FRONTEND_URL', 'http://localhost:3000')])
 
     # Register blueprints
-    from routes.main import main_bp
-    from routes.api import api_bp
-    from routes.auth import auth_bp
+    try:
+        from routes.main import main_bp
+        app.register_blueprint(main_bp)
+    except ImportError:
+        pass
 
-    app.register_blueprint(main_bp)
-    app.register_blueprint(api_bp, url_prefix='/api')
-    app.register_blueprint(auth_bp, url_prefix='/auth')
+    try:
+        from routes.api import api_bp
+        app.register_blueprint(api_bp, url_prefix='/api')
+    except ImportError:
+        pass
+
+    # Auth routes
+    from routes.auth import auth_bp
+    app.register_blueprint(auth_bp, url_prefix='/api')
+
+    # Upload controller
+    from controllers.upload_controller import upload_bp
+    app.register_blueprint(upload_bp, url_prefix='/api')
 
     return app

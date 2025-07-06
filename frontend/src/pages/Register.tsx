@@ -38,6 +38,7 @@ const Register: React.FC = () => {
     setLoading(true);
 
     try {
+      console.log('Attempting registration with:', { email, username, password: '***' });
       const success = await register(email, username, password);
 
       if (success) {
@@ -47,6 +48,7 @@ const Register: React.FC = () => {
         toast.error('Registration failed. User may already exist.');
       }
     } catch (error) {
+      console.error('Registration catch error:', error);
       toast.error('Registration failed. Please try again.');
     } finally {
       setLoading(false);

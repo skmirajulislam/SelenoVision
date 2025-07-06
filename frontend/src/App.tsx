@@ -8,8 +8,9 @@ import { AuthProvider } from "./contexts/AuthContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import Upload from "./pages/Upload";
 import Dashboard from "./pages/Dashboard";
+import Processing from "./pages/Processing";
+import Profile from "./pages/Profile";
 import Results from "./pages/Results";
 import NotFound from "./pages/NotFound";
 
@@ -26,8 +27,9 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/upload" element={<Upload />} />
+            <Route path="/processing" element={<Processing />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/results/:jobId" element={<Results />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

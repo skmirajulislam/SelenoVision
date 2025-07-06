@@ -54,7 +54,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const fetchCurrentUser = async (authToken: string) => {
     try {
-      const response = await fetch(`${API_BASE}/auth/me`, {
+      const response = await fetch(`${API_BASE}/api/profile`, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json',
@@ -80,7 +80,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE}/auth/login`, {
+      const response = await fetch(`${API_BASE}/api/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -107,7 +107,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (email: string, username: string, password: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE}/auth/register`, {
+      console.log('Attempting registration:', { email, username });
+
+      const response = await fetch(`${API_BASE}/api/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -116,6 +118,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       const data = await response.json();
+      console.log('Registration response:', { status: response.status, data });
 
       if (response.ok) {
         setUser(data.user);
@@ -123,11 +126,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         Cookies.set('token', data.access_token, { expires: 7 }); // 7 days
         return true;
       } else {
-        console.error('Registration error:', data.error);
+        console.error('Registration failed:', data.error);
         return false;
       }
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error('Registration network error:', error);
       return false;
     }
   };
@@ -140,7 +143,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const deleteAccount = async (): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE}/auth/delete-account`, {
+      const response = await fetch(`${API_BASE}/api/delete-account`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

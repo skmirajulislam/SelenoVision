@@ -86,25 +86,33 @@ const Dashboard = () => {
   const fetchResults = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/results`,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+      const token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('token='))
+        ?.split('=')[1];
+
+      const response = await fetch('http://localhost:5000/api/dashboard', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setResults(data.recent_results || []);
+
+        // If there's a highlight job, select it
+        if (highlightJobId) {
+          const highlightResult = data.recent_results.find(
+            (r: ProcessingResult) => r.job_id === highlightJobId
+          );
+          if (highlightResult) {
+            setSelectedResult(highlightResult);
           }
         }
-      );
-
-      setResults(response.data.results || []);
-
-      // If there's a highlight job, select it
-      if (highlightJobId) {
-        const highlightResult = response.data.results.find(
-          (r: ProcessingResult) => r.job_id === highlightJobId
-        );
-        if (highlightResult) {
-          setSelectedResult(highlightResult);
-        }
+      } else {
+        throw new Error('Failed to fetch dashboard data');
       }
     } catch (error) {
       console.error('Error fetching results:', error);
@@ -126,20 +134,28 @@ const Dashboard = () => {
 
     try {
       setDeleting(resultId);
-      await axios.delete(
-        `${import.meta.env.VITE_API_URL}/api/results/${resultId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
+      const token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('token='))
+        ?.split('=')[1];
 
-      setResults(prev => prev.filter(r => r._id !== resultId));
-      if (selectedResult?._id === resultId) {
-        setSelectedResult(null);
+      const response = await fetch(`http://localhost:5000/api/results/${resultId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        setResults(prev => prev.filter(r => r._id !== resultId));
+        if (selectedResult?._id === resultId) {
+          setSelectedResult(null);
+        }
+        toast.success('Result deleted successfully');
+      } else {
+        throw new Error('Failed to delete result');
       }
-      toast.success('Result deleted successfully');
     } catch (error) {
       console.error('Error deleting result:', error);
       toast.error('Failed to delete result');
@@ -247,10 +263,10 @@ const Dashboard = () => {
                   Upload your first lunar image to get started
                 </p>
                 <Button
-                  onClick={() => navigate('/upload')}
+                  onClick={() => navigate('/processing')}
                   className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
                 >
-                  Upload Image
+                  Process Image
                 </Button>
               </CardContent>
             </Card>
@@ -268,8 +284,8 @@ const Dashboard = () => {
                         <div
                           key={result._id}
                           className={`p-4 rounded-lg border cursor-pointer transition-all ${selectedResult?._id === result._id
-                              ? 'border-purple-500 bg-purple-500/10'
-                              : 'border-white/10 hover:border-white/20 hover:bg-white/5'
+                            ? 'border-purple-500 bg-purple-500/10'
+                            : 'border-white/10 hover:border-white/20 hover:bg-white/5'
                             } ${highlightJobId === result.job_id
                               ? 'ring-2 ring-purple-400 ring-opacity-50'
                               : ''
