@@ -191,9 +191,8 @@ desktop.ini
 # Model files and weights (if any ML components added)
 *.pkl
 *.joblib
-*.model
 weights/
-models/
+
 
 # Configuration files with sensitive data
 config_local.py
