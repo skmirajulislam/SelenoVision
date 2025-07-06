@@ -4,7 +4,6 @@ RESTful endpoints for image processing
 """
 
 from flask import Blueprint, jsonify
-from routes.upload import upload_bp
 from routes.status import status_bp
 from routes.results import results_bp
 from routes.analysis import analysis_bp
@@ -12,7 +11,6 @@ from routes.analysis import analysis_bp
 api_bp = Blueprint('api', __name__)
 
 # Register sub-blueprints
-api_bp.register_blueprint(upload_bp, url_prefix='/upload')
 api_bp.register_blueprint(status_bp, url_prefix='/status')
 api_bp.register_blueprint(results_bp, url_prefix='/results')
 api_bp.register_blueprint(analysis_bp, url_prefix='/analysis')
@@ -26,10 +24,10 @@ def api_info():
         "version": "1.0",
         "description": "High-Resolution Lunar DEM Generation from Single Images",
         "endpoints": {
-            "upload": "/api/upload/",
             "status": "/api/status/",
             "results": "/api/results/",
-            "analysis": "/api/analysis/"
+            "analysis": "/api/analysis/",
+            "upload": "/api/upload/"
         },
         "documentation": "/docs",
         "health": "/health"

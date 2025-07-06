@@ -5,7 +5,15 @@ User model for MongoDB
 from datetime import datetime
 from bson import ObjectId
 from werkzeug.security import generate_password_hash, check_password_hash
-from database import get_db
+try:
+    from database import get_db
+except ImportError:
+    # Fallback import
+    import sys
+    import os
+    sys.path.append(os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__))))
+    from database import get_db
 
 
 class User:

@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Moon, ArrowLeft, Download, Eye, FileText, Image } from 'lucide-react';
+import Navigation from '../components/Navigation';
 import { useJobResults } from '../hooks/useJobResults';
 import { JobResult } from '../types/api';
 import ResultsViewer from '../components/results/ResultsViewer';
@@ -10,7 +11,7 @@ import DownloadManager from '../components/results/DownloadManager';
 const Results = () => {
   const { jobId } = useParams<{ jobId: string }>();
   const { results, loading, error, fetchResults } = useJobResults();
-  
+
   useEffect(() => {
     if (jobId) {
       fetchResults(jobId);
@@ -38,8 +39,8 @@ const Results = () => {
               <span className="text-2xl font-bold text-white">Luna</span>
             </div>
             <div className="flex items-center space-x-4">
-              <Link 
-                to="/dashboard" 
+              <Link
+                to="/dashboard"
                 className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -48,7 +49,7 @@ const Results = () => {
             </div>
           </nav>
         </header>
-        
+
         <div className="px-6 py-12 text-center">
           <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-8 max-w-md mx-auto">
             <h2 className="text-xl font-semibold text-red-300 mb-2">Error Loading Results</h2>
@@ -61,30 +62,8 @@ const Results = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Header */}
-      <header className="relative z-10 px-6 py-4">
-        <nav className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Moon className="h-8 w-8 text-purple-400" />
-            <span className="text-2xl font-bold text-white">Luna</span>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Link 
-              to="/dashboard" 
-              className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span>Dashboard</span>
-            </Link>
-            <Link to="/upload" className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors">
-              Upload
-            </Link>
-          </div>
-        </nav>
-      </header>
-
-      {/* Main Content */}
-      <main className="px-6 py-12">
+      <Navigation />
+      <div className="p-6">
         <div className="max-w-7xl mx-auto">
           {/* Page Header */}
           <div className="mb-12">
@@ -134,7 +113,7 @@ const Results = () => {
             </>
           )}
         </div>
-      </main>
+      </div>
     </div>
   );
 };

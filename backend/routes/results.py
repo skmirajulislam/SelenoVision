@@ -9,6 +9,18 @@ from controllers.results_controller import ResultsController
 results_bp = Blueprint('results', __name__)
 
 
+@results_bp.route('/', methods=['GET'])
+def get_user_results():
+    """Get all processing results for the current user"""
+    return ResultsController.get_user_results()
+
+
+@results_bp.route('/<result_id>', methods=['DELETE'])
+def delete_user_result(result_id):
+    """Delete a specific processing result"""
+    return ResultsController.delete_user_result(result_id)
+
+
 @results_bp.route('/<job_id>/summary', methods=['GET'])
 def get_results_summary(job_id):
     """Get comprehensive processing results"""

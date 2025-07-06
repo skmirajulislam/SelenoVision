@@ -41,7 +41,13 @@ def create_app():
                             x_proto=1, x_host=1, x_prefix=1)
 
     # CORS
-    CORS(app, origins=[os.getenv('FRONTEND_URL', 'http://localhost:3000')])
+    CORS(app, origins=[
+        os.getenv('FRONTEND_URL', 'http://localhost:3000'),
+        'http://localhost:8080',
+        'http://localhost:8081',
+        'http://localhost:3000',
+        'http://localhost:5173'
+    ])
 
     # Register blueprints
     try:

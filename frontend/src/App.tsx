@@ -14,6 +14,7 @@ import Dashboard from "./pages/Dashboard";
 import Processing from "./pages/Processing";
 import Profile from "./pages/Profile";
 import Results from "./pages/Results";
+import ResultsList from "./pages/ResultsList";
 import NotFound from "./pages/NotFound";
 import LunarChatbot from "./components/LunarChatbot";
 
@@ -41,6 +42,7 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/processing" element={<Processing />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/results" element={<ResultsList />} />
                 <Route path="/results/:jobId" element={<Results />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

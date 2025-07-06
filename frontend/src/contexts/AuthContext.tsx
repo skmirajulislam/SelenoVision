@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import Cookies from 'js-cookie';
+import { API_CONFIG, STORAGE_KEYS } from '../config/constants';
 
 export interface User {
   _id: string;
@@ -22,6 +23,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+export { AuthContext };
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -39,20 +42,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const API_BASE = 'http://localhost:5000';
+  const API_BASE = API_CONFIG.BASE_URL;
 
-  useEffect(() => {
-    // Check for stored token on mount
-    const storedToken = Cookies.get('token');
-    if (storedToken) {
-      setToken(storedToken);
-      fetchCurrentUser(storedToken);
-    } else {
-      setLoading(false);
-    }
-  }, []);
-
-  const fetchCurrentUser = async (authToken: string) => {
+  const fetchCurrentUser = useCallback(async (authToken: string) => {
     try {
       const response = await fetch(`${API_BASE}/api/profile`, {
         headers: {
@@ -66,17 +58,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(data.user);
       } else {
         // Token is invalid, remove it
-        Cookies.remove('token');
+        Cookies.remove(STORAGE_KEYS.TOKEN);
         setToken(null);
       }
     } catch (error) {
       console.error('Error fetching user:', error);
-      Cookies.remove('token');
+      Cookies.remove(STORAGE_KEYS.TOKEN);
       setToken(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [API_BASE]);
+
+  useEffect(() => {
+    // Check for stored token on mount
+    const storedToken = Cookies.get(STORAGE_KEYS.TOKEN);
+    if (storedToken) {
+      setToken(storedToken);
+      fetchCurrentUser(storedToken);
+    } else {
+      setLoading(false);
+    }
+  }, [fetchCurrentUser]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
@@ -93,7 +96,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (response.ok) {
         setUser(data.user);
         setToken(data.access_token);
-        Cookies.set('token', data.access_token, { expires: 7 }); // 7 days
+        Cookies.set(STORAGE_KEYS.TOKEN, data.access_token, { expires: 7 }); // 7 days
         return true;
       } else {
         console.error('Login error:', data.error);
@@ -123,7 +126,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (response.ok) {
         setUser(data.user);
         setToken(data.access_token);
-        Cookies.set('token', data.access_token, { expires: 7 }); // 7 days
+        Cookies.set(STORAGE_KEYS.TOKEN, data.access_token, { expires: 7 }); // 7 days
         return true;
       } else {
         console.error('Registration failed:', data.error);
@@ -138,7 +141,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = () => {
     setUser(null);
     setToken(null);
-    Cookies.remove('token');
+    Cookies.remove(STORAGE_KEYS.TOKEN);
   };
 
   const deleteAccount = async (): Promise<boolean> => {

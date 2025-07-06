@@ -3,11 +3,13 @@ Results controller for handling results retrieval and downloads
 """
 
 import os
-from flask import current_app, jsonify, send_file
+from flask import current_app, jsonify, send_file, request
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from PIL import Image
 import mimetypes
 
 from models.job import JobStatus, job_storage
+from models.processing_result import ProcessingResult
 from utils.helpers import get_job_directory
 
 
@@ -150,3 +152,59 @@ class ResultsController:
                     return jsonify({"error": "File is not a valid image"}), 400
 
         return jsonify({"error": "File not found"}), 404
+
+    @staticmethod
+    @jwt_required()
+    def get_user_results():
+        """Get all processing results for the current user"""
+        try:
+            current_user_id = get_jwt_identity()
+            results = ProcessingResult.find_by_user_id(
+                current_user_id, limit=100)
+
+            return jsonify({
+                "success": True,
+                "results": results,
+                "total": len(results)
+            })
+        except Exception as e:
+            return jsonify({
+                "success": False,
+                "error": "Failed to retrieve results",
+                "details": str(e)
+            }), 500
+
+    @staticmethod
+    @jwt_required()
+    def delete_user_result(result_id: str):
+        """Delete a specific processing result"""
+        try:
+            current_user_id = get_jwt_identity()
+
+            # First verify the result belongs to the current user
+            result = ProcessingResult.find_by_id(result_id)
+            if not result or result.get('user_id') != current_user_id:
+                return jsonify({
+                    "success": False,
+                    "error": "Result not found or access denied"
+                }), 404
+
+            # Delete the result
+            success = ProcessingResult.delete_result(result_id)
+
+            if success:
+                return jsonify({
+                    "success": True,
+                    "message": "Result deleted successfully"
+                })
+            else:
+                return jsonify({
+                    "success": False,
+                    "error": "Failed to delete result"
+                }), 500
+        except Exception as e:
+            return jsonify({
+                "success": False,
+                "error": "Failed to delete result",
+                "details": str(e)
+            }), 500

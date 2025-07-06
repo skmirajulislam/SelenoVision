@@ -226,8 +226,8 @@ const Upload = () => {
                                 <div
                                     {...getRootProps()}
                                     className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all duration-300 ${isDragActive
-                                            ? 'border-purple-400 bg-purple-500/10'
-                                            : 'border-gray-600 hover:border-purple-400 hover:bg-purple-500/5'
+                                        ? 'border-purple-400 bg-purple-500/10'
+                                        : 'border-gray-600 hover:border-purple-400 hover:bg-purple-500/5'
                                         }`}
                                 >
                                     <input {...getInputProps()} />
