@@ -1,55 +1,38 @@
-"""
-Luna Photoclinometry Flask Application Factory
-Main application initialization and configuration
-"""
-
 from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from werkzeug.middleware.proxy_fix import ProxyFix
 from dotenv import load_dotenv
+from database import init_db  # don't call get_db here
 import os
 
 load_dotenv()
 
-
 def create_app():
-    """Application factory pattern"""
     app = Flask(__name__)
 
-    # Configuration
-    app.config['SECRET_KEY'] = os.getenv(
-        'SECRET_KEY', 'luna-photoclinometry-secret-key')
-    app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
+    # Basic config
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default-secret')
+    app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'default-jwt')
+    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = False
     app.config['UPLOAD_FOLDER'] = 'uploads'
     app.config['RESULTS_FOLDER'] = 'server_results'
 
-    # JWT Configuration
-    app.config['JWT_SECRET_KEY'] = os.getenv(
-        'JWT_SECRET_KEY', 'luna-jwt-secret-key')
-    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = False  # Never expire for now
+    # Init extensions
+    JWTManager(app)
+    init_db(app)  # ✅ Initialize MongoDB here (do NOT call get_db)
 
-    # Initialize extensions
-    jwt = JWTManager(app)
+    # Proxy & CORS
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
+    CORS(app, origins=[os.getenv("FRONTEND_URL", "http://localhost:8080")])
 
-    # Initialize MongoDB
-    from database import init_db
-    init_db(app)
-
-    # Middleware
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1,
-                            x_proto=1, x_host=1, x_prefix=1)
-
-    # CORS
-    CORS(app, origins=[os.getenv('FRONTEND_URL', 'http://localhost:3000')])
-
-    # Register blueprints
+    # Blueprints
     from routes.main import main_bp
     from routes.api import api_bp
     from routes.auth import auth_bp
 
     app.register_blueprint(main_bp)
-    app.register_blueprint(api_bp, url_prefix='/api')
-    app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(api_bp, url_prefix="/api")
+    app.register_blueprint(auth_bp, url_prefix="/auth")
 
     return app

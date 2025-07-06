@@ -11,13 +11,13 @@ from database import get_db
 class User:
     """User model for authentication and data management"""
 
-    def __init__(self, email, username, password_hash=None, _id=None):
+    def __init__(self, email, username, password_hash=None, _id=None, created_at=None, updated_at=None):
         self._id = _id
         self.email = email
         self.username = username
         self.password_hash = password_hash
-        self.created_at = datetime.utcnow()
-        self.updated_at = datetime.utcnow()
+        self.created_at = created_at or datetime.utcnow()
+        self.updated_at = updated_at or datetime.utcnow()
 
     @staticmethod
     def create_user(email, username, password):
@@ -50,7 +50,9 @@ class User:
                 email=user_data["email"],
                 username=user_data["username"],
                 password_hash=user_data["password_hash"],
-                _id=user_data["_id"]
+                _id=user_data["_id"],
+                created_at=user_data.get("created_at"),
+                updated_at=user_data.get("updated_at")
             )
         return None
 
@@ -67,7 +69,9 @@ class User:
                 email=user_data["email"],
                 username=user_data["username"],
                 password_hash=user_data["password_hash"],
-                _id=user_data["_id"]
+                _id=user_data["_id"],
+                created_at=user_data.get("created_at"),
+                updated_at=user_data.get("updated_at")
             )
         return None
 
@@ -97,6 +101,6 @@ class User:
             "_id": str(self._id),
             "email": self.email,
             "username": self.username,
-            "created_at": self.created_at.isoformat(),
-            "updated_at": self.updated_at.isoformat()
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }

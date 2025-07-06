@@ -1,9 +1,5 @@
-"""
-MongoDB database configuration and connection
-"""
-
+# database.py
 import os
-from pymongo import MongoClient
 from flask_pymongo import PyMongo
 from dotenv import load_dotenv
 
@@ -14,12 +10,12 @@ mongo = PyMongo()
 
 def init_db(app):
     """Initialize MongoDB connection"""
-    app.config["MONGO_URI"] = os.getenv(
-        'MONGODB_URI')
+    app.config["MONGO_URI"] = os.getenv("MONGODB_URI")
     mongo.init_app(app)
-    return mongo
 
 
 def get_db():
-    """Get database instance"""
+    """Get the database instance"""
+    if mongo.db is None :
+        raise RuntimeError("MongoDB is not initialized properly.")
     return mongo.db
