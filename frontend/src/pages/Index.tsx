@@ -1,28 +1,102 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Rocket, Moon, Zap, BarChart3, FolderOpen, Upload, Eye, Settings } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { Rocket, Moon, Zap, BarChart3, FolderOpen, Upload, Eye, Settings, LogOut, User, Trash2, ChevronDown } from 'lucide-react';
+import { Button } from '../components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
+import { Alert, AlertDescription } from '../components/ui/alert';
+import { toast } from 'sonner';
 
 const Index = () => {
+  const { user, logout, deleteAccount, isAuthenticated } = useAuth();
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    toast.success('Logged out successfully');
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!confirm('Are you sure you want to delete your account? This action cannot be undone and will remove all your processing results.')) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      const success = await deleteAccount();
+      if (success) {
+        toast.success('Account deleted successfully');
+      } else {
+        toast.error('Failed to delete account. Please try again.');
+      }
+    } catch (error) {
+      toast.error('Failed to delete account. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Header */}
       <header className="relative z-10 px-6 py-4">
         <nav className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Moon className="h-8 w-8 text-purple-400" />
-            <span className="text-2xl font-bold text-white">Luna</span>
+            <Rocket className="h-8 w-8 text-purple-400" />
+            <span className="text-2xl font-bold text-white">Luna Photoclinometry</span>
           </div>
           <div className="hidden md:flex items-center space-x-8">
-            <Link to="/upload" className="text-gray-300 hover:text-white transition-colors">
-              Upload
-            </Link>
-            <Link to="/dashboard" className="text-gray-300 hover:text-white transition-colors">
-              Dashboard
-            </Link>
-            <Link to="/upload" className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-all duration-200 hover:scale-105">
-              Get Started
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link to="/upload" className="text-gray-300 hover:text-white transition-colors">
+                  Upload
+                </Link>
+                <Link to="/dashboard" className="text-gray-300 hover:text-white transition-colors">
+                  Dashboard
+                </Link>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-purple-500 text-purple-300 hover:bg-purple-600 hover:text-white"
+                    >
+                      <User className="h-4 w-4 mr-2" />
+                      {user?.username}
+                      <ChevronDown className="h-4 w-4 ml-2" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 bg-slate-800 border-slate-700">
+                    <DropdownMenuItem
+                      onClick={handleLogout}
+                      className="text-white hover:bg-slate-700 cursor-pointer"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-slate-700" />
+                    <DropdownMenuItem
+                      onClick={handleDeleteAccount}
+                      disabled={isDeleting}
+                      className="text-red-400 hover:bg-red-500/10 hover:text-red-300 cursor-pointer"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      {isDeleting ? 'Deleting...' : 'Delete Account'}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="text-gray-300 hover:text-white transition-colors">
+                  Login
+                </Link>
+                <Link to="/register" className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-all duration-200 hover:scale-105">
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
         </nav>
       </header>
@@ -32,37 +106,59 @@ const Index = () => {
         <div className="max-w-6xl mx-auto text-center">
           <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-6 py-2 mb-8">
             <Rocket className="h-5 w-5 text-purple-400" />
-            <span className="text-purple-200">Advanced Lunar Analysis</span>
+            <span className="text-purple-200">Advanced Lunar Analysis Platform</span>
           </div>
-          
+
           <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">
-            Luna <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">Photoclinometry</span> API
+            Luna <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">Photoclinometry</span>
           </h1>
-          
+
           <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-4xl mx-auto">
-            High-Resolution Lunar DEM Generation System using advanced Shape-from-Shading algorithms 
+            High-Resolution Lunar DEM Generation System using advanced Shape-from-Shading algorithms
             for precise terrain analysis and mission-critical surface mapping
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-            <Link 
-              to="/upload"
-              className="group bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/25"
+            {isAuthenticated ? (
+              <Link
+                to="/upload"
+                className="group bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/25"
+              >
+                <Upload className="inline h-5 w-5 mr-2" />
+                Upload Lunar Image
+              </Link>
+            ) : (
+              <>
+                <Link
+                  to="/register"
+                  className="group bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/25"
+                >
+                  <Rocket className="inline h-5 w-5 mr-2" />
+                  Get Started Free
+                </Link>
+                <Link
+                  to="/login"
+                  className="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-8 py-4 rounded-xl font-semibold hover:bg-white/20 transition-all duration-300"
+                >
+                  Sign In
+                </Link>
+              </>
+            )}
+            <a
+              href="http://localhost:5000/docs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-8 py-4 rounded-xl font-semibold hover:bg-white/20 transition-all duration-300"
             >
-              <div className="flex items-center space-x-2">
-                <Upload className="h-5 w-5" />
-                <span>Start Analysis</span>
-              </div>
-            </Link>
-            <Link 
-              to="/dashboard"
-              className="group bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 hover:scale-105"
-            >
-              <div className="flex items-center space-x-2">
-                <Eye className="h-5 w-5" />
-                <span>View Dashboard</span>
-              </div>
-            </Link>
+              <Eye className="inline h-5 w-5 mr-2" />
+              View API Docs
+            </a>
+          </div>
+
+          {/* Status Indicator */}
+          <div className="inline-flex items-center space-x-2 bg-green-500/20 border border-green-500/30 rounded-full px-4 py-2">
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+            <span className="text-green-300 text-sm">Server Online & Ready</span>
           </div>
         </div>
       </section>
