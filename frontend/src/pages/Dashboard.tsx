@@ -53,31 +53,23 @@ interface DashboardData {
   total_results: number;
   completed_results: number;
   processing_results: number;
+  queued_results: number;
   failed_results: number;
   recent_results: ProcessingResult[];
 }
 
 const Dashboard: React.FC = () => {
-  const { user, token, loading: authLoading, isAuthenticated } = useAuth();
+  const { user, token, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      console.log('🔒 User not authenticated, redirecting to login');
-      navigate('/login');
-      return;
-    }
-  }, [authLoading, isAuthenticated, navigate]);
-
   const fetchDashboardData = useCallback(async () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/dashboard`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/results/dashboard`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -162,6 +154,52 @@ const Dashboard: React.FC = () => {
     }
   }, [user, navigate, authLoading]);
 
+  const downloadAllImagesFromResult = async (result: ProcessingResult) => {
+    if (!result.cloudinary_urls) {
+      toast.error('No images available for download');
+      return;
+    }
+
+    toast.info('Starting download of all images...');
+
+    const imageTypes = [
+      { key: 'original_image', name: 'original_image.jpg' },
+      { key: 'visualization', name: 'main_visualization.png' },
+      { key: 'analysis_plot', name: 'comprehensive_analysis.png' },
+      { key: 'slope_analysis', name: 'slope_analysis.png' },
+      { key: 'aspect_analysis', name: 'aspect_analysis.png' },
+      { key: 'hillshade', name: 'hillshade.png' },
+      { key: 'contour_lines', name: 'contour_lines.png' },
+      { key: 'quality_report', name: 'quality_report.png' }
+    ];
+
+    let downloadCount = 0;
+    for (const imageType of imageTypes) {
+      const url = result.cloudinary_urls[imageType.key as keyof typeof result.cloudinary_urls];
+      if (url) {
+        try {
+          await new Promise(resolve => setTimeout(resolve, 500)); // Small delay between downloads
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `${result.job_id}_${imageType.name}`;
+          link.target = '_blank';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          downloadCount++;
+        } catch (error) {
+          console.error(`Failed to download ${imageType.name}:`, error);
+        }
+      }
+    }
+
+    if (downloadCount > 0) {
+      toast.success(`Successfully started download of ${downloadCount} images`);
+    } else {
+      toast.error('No images were available for download');
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-900 to-indigo-900 flex items-center justify-center">
@@ -203,7 +241,7 @@ const Dashboard: React.FC = () => {
           </div>
 
           {/* Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
             <Card className="bg-gradient-to-br from-blue-900/50 to-blue-800/50 border-blue-400/20">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -248,6 +286,18 @@ const Dashboard: React.FC = () => {
                     <p className="text-3xl font-bold text-white">{dashboardData?.failed_results || 0}</p>
                   </div>
                   <AlertCircle className="w-8 h-8 text-red-400" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-yellow-900/50 to-yellow-800/50 border-yellow-400/20">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-yellow-200 text-sm font-medium">Queued</p>
+                    <p className="text-3xl font-bold text-white">{dashboardData?.queued_results || 0}</p>
+                  </div>
+                  <Clock className="w-8 h-8 text-yellow-400" />
                 </div>
               </CardContent>
             </Card>
@@ -345,21 +395,19 @@ const Dashboard: React.FC = () => {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => navigate(`/results/${result.job_id}`)}
+                                onClick={() => navigate('/results')}
                                 className="border-blue-400/20 text-blue-400 hover:bg-blue-800/30"
                               >
                                 <Eye className="w-4 h-4" />
                               </Button>
-                              {result.cloudinary_urls?.dem_geotiff && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => window.open(result.cloudinary_urls.dem_geotiff, '_blank')}
-                                  className="border-green-400/20 text-green-400 hover:bg-green-800/30"
-                                >
-                                  <Download className="w-4 h-4" />
-                                </Button>
-                              )}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => downloadAllImagesFromResult(result)}
+                                className="border-green-400/20 text-green-400 hover:bg-green-800/30"
+                              >
+                                <Download className="w-4 h-4" />
+                              </Button>
                             </>
                           )}
                           <Button

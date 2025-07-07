@@ -124,8 +124,12 @@ const Processing: React.FC = () => {
     };
 
     const pollProcessingStatus = async (jobId: string) => {
+        let attempts = 0;
+        const maxAttempts = 300; // 10 minutes max (300 * 2 seconds)
+
         const poll = async () => {
             try {
+                attempts++;
                 const response = await fetch(`${import.meta.env.VITE_API_URL}/api/status/${jobId}`, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -133,8 +137,15 @@ const Processing: React.FC = () => {
                 });
 
                 if (response.ok) {
-                    const status: ProcessingStatus = await response.json();
-                    setProcessingStatus(status);
+                    const status = await response.json();
+                    console.log('Status update:', status); // Debug log
+
+                    setProcessingStatus({
+                        status: status.status,
+                        progress: status.progress,
+                        step: status.message,
+                        error_message: status.error_message
+                    });
 
                     if (status.status === 'completed') {
                         setShowCompletion(true);
@@ -144,13 +155,18 @@ const Processing: React.FC = () => {
                         toast.error(status.error_message || 'Processing failed');
                         return; // Stop polling
                     }
+                } else {
+                    console.error('Status polling failed:', response.status);
                 }
             } catch (error) {
                 console.error('Error polling status:', error);
             }
 
-            // Continue polling if still processing
-            if (processingStatus?.status === 'processing' || processingStatus?.status === 'queued') {
+            // Continue polling if still processing and haven't exceeded max attempts
+            if (attempts < maxAttempts &&
+                (processingStatus?.status === 'processing' ||
+                    processingStatus?.status === 'queued' ||
+                    !processingStatus)) {
                 setTimeout(poll, 2000); // Poll every 2 seconds
             }
         };
@@ -162,8 +178,8 @@ const Processing: React.FC = () => {
         if (!processingStatus) return 0;
 
         switch (processingStatus.status) {
-            case 'queued': return 10;
-            case 'processing': return processingStatus.progress || 50;
+            case 'queued': return 5;
+            case 'processing': return processingStatus.progress || 10;
             case 'completed': return 100;
             case 'failed': return 0;
             default: return 0;

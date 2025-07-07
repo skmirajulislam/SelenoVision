@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -22,7 +22,7 @@ interface UploadStatus {
 
 const Upload = () => {
     const navigate = useNavigate();
-    const { user, isAuthenticated, loading: authLoading } = useAuth();
+    const { user } = useAuth();
     const [uploadStatus, setUploadStatus] = useState<UploadStatus>({
         uploading: false,
         processing: false,
@@ -31,15 +31,6 @@ const Upload = () => {
         progress: 0,
         jobId: null,
     });
-
-    // Redirect to login if not authenticated
-    useEffect(() => {
-        if (!authLoading && !isAuthenticated) {
-            console.log('🔒 User not authenticated, redirecting to login');
-            navigate('/login');
-            return;
-        }
-    }, [authLoading, isAuthenticated, navigate]);
 
     const pollProcessingStatus = useCallback(async (jobId: string) => {
         const maxAttempts = 120; // 10 minutes with 5-second intervals

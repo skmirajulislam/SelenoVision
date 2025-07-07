@@ -252,6 +252,7 @@ class ProcessingResult:
                 'total_results': 0,
                 'completed_results': 0,
                 'processing_results': 0,
+                'queued_results': 0,
                 'failed_results': 0
             }
 
@@ -264,6 +265,8 @@ class ProcessingResult:
                     stats['completed_results'] = count
                 elif status == 'processing':
                     stats['processing_results'] = count
+                elif status == 'queued':
+                    stats['queued_results'] = count
                 elif status == 'failed':
                     stats['failed_results'] = count
 
@@ -274,6 +277,7 @@ class ProcessingResult:
                 'total_results': 0,
                 'completed_results': 0,
                 'processing_results': 0,
+                'queued_results': 0,
                 'failed_results': 0
             }
 

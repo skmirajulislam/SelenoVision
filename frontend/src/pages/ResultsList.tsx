@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { ArrowLeft, RefreshCw, Search, Filter, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,6 @@ import { api } from '@/services/api';
 import { toast } from 'sonner';
 import Cookies from 'js-cookie';
 import { STORAGE_KEYS } from '@/config/constants';
-import { useAuth } from '@/contexts/AuthContext';
 
 interface ProcessingResult {
     _id: string;
@@ -42,8 +41,6 @@ interface ProcessingResult {
 }
 
 const ResultsList: React.FC = () => {
-    const { user, isAuthenticated, loading: authLoading } = useAuth();
-    const navigate = useNavigate();
     const [results, setResults] = useState<ProcessingResult[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -51,29 +48,17 @@ const ResultsList: React.FC = () => {
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [error, setError] = useState<string | null>(null);
 
-    // Redirect to login if not authenticated
-    useEffect(() => {
-        if (!authLoading && !isAuthenticated) {
-            console.log('🔒 User not authenticated, redirecting to login');
-            navigate('/login');
-            return;
-        }
-    }, [authLoading, isAuthenticated, navigate]);
-
     const fetchResults = async (showRefreshToast = false) => {
         try {
-            console.log('🔄 Fetching results...', { showRefreshToast });
             if (showRefreshToast) {
                 setRefreshing(true);
             }
 
             const response = await api.getUserResults();
-            console.log('📊 API Response:', { success: response.success, dataLength: response.data?.length, error: response.error });
 
             if (response.success && response.data) {
                 setResults(response.data);
                 setError(null);
-                console.log('✅ Results set successfully, count:', response.data.length);
                 if (showRefreshToast) {
                     toast.success('Results refreshed successfully');
                 }
@@ -84,7 +69,7 @@ const ResultsList: React.FC = () => {
             const errorMessage = err instanceof Error ? err.message : 'Failed to fetch results';
             setError(errorMessage);
             toast.error(errorMessage);
-            console.error('❌ Results fetch error:', err);
+            console.error('Results fetch error:', err);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -101,20 +86,16 @@ const ResultsList: React.FC = () => {
     };
 
     useEffect(() => {
-        // Only fetch results if user is authenticated
-        if (!authLoading && isAuthenticated) {
-            console.log('✅ User authenticated, fetching results');
-            fetchResults();
-        }
-    }, [authLoading, isAuthenticated]);
+        fetchResults();
+    }, []);
 
     // Filter results based on search term and status
-    const filteredResults = results.filter(result => {
+    const filteredResults = Array.isArray(results) ? results.filter(result => {
         const matchesSearch = result.original_filename.toLowerCase().includes(searchTerm.toLowerCase()) ||
             result.job_id.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = statusFilter === 'all' || result.status === statusFilter;
         return matchesSearch && matchesStatus;
-    });
+    }) : [];
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -126,20 +107,18 @@ const ResultsList: React.FC = () => {
         }
     };
 
-    const statusCounts = results.reduce((acc, result) => {
+    const statusCounts = Array.isArray(results) ? results.reduce((acc, result) => {
         acc[result.status] = (acc[result.status] || 0) + 1;
         return acc;
-    }, {} as Record<string, number>);
+    }, {} as Record<string, number>) : {};
 
-    if (authLoading || loading) {
+    if (loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6">
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center py-12">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-400 mx-auto"></div>
-                        <p className="text-white mt-4">
-                            {authLoading ? 'Authenticating...' : 'Loading your results...'}
-                        </p>
+                        <p className="text-white mt-4">Loading your results...</p>
                     </div>
                 </div>
             </div>
@@ -171,11 +150,11 @@ const ResultsList: React.FC = () => {
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
                     <Card className="bg-black/20 border-purple-500/30">
                         <CardContent className="p-4">
                             <div className="text-center">
-                                <div className="text-2xl font-bold text-white">{results.length}</div>
+                                <div className="text-2xl font-bold text-white">{Array.isArray(results) ? results.length : 0}</div>
                                 <div className="text-purple-200 text-sm">Total Results</div>
                             </div>
                         </CardContent>
@@ -193,6 +172,14 @@ const ResultsList: React.FC = () => {
                             <div className="text-center">
                                 <div className="text-2xl font-bold text-white">{statusCounts.processing || 0}</div>
                                 <div className="text-blue-200 text-sm">Processing</div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card className="bg-black/20 border-yellow-500/30">
+                        <CardContent className="p-4">
+                            <div className="text-center">
+                                <div className="text-2xl font-bold text-white">{statusCounts.queued || 0}</div>
+                                <div className="text-yellow-200 text-sm">Queued</div>
                             </div>
                         </CardContent>
                     </Card>
@@ -238,6 +225,13 @@ const ResultsList: React.FC = () => {
                             className="text-sm"
                         >
                             Processing
+                        </Button>
+                        <Button
+                            variant={statusFilter === 'queued' ? 'default' : 'outline'}
+                            onClick={() => setStatusFilter('queued')}
+                            className="text-sm"
+                        >
+                            Queued
                         </Button>
                         <Button
                             variant={statusFilter === 'failed' ? 'default' : 'outline'}
@@ -299,7 +293,7 @@ const ResultsList: React.FC = () => {
 
                 {/* Footer */}
                 <div className="mt-12 text-center text-purple-200 text-sm">
-                    <p>Showing {filteredResults.length} of {results.length} results</p>
+                    <p>Showing {filteredResults.length} of {Array.isArray(results) ? results.length : 0} results</p>
                 </div>
             </div>
         </div>

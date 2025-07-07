@@ -25,6 +25,8 @@ const Profile: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [stats, setStats] = useState<UserStats | null>(null);
+  const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [editData, setEditData] = useState({
     username: user?.username || '',
     email: user?.email || '',
@@ -43,6 +45,12 @@ const Profile: React.FC = () => {
         confirmPassword: ''
       });
       fetchUserStats();
+
+      // Load Gemini API key from localStorage
+      const savedGeminiKey = localStorage.getItem('gemini_api_key');
+      if (savedGeminiKey) {
+        setGeminiApiKey(savedGeminiKey);
+      }
     }
   }, [user]);
 
@@ -159,6 +167,23 @@ const Profile: React.FC = () => {
     }
   };
 
+  const handleSaveGeminiKey = () => {
+    if (geminiApiKey.trim()) {
+      localStorage.setItem('gemini_api_key', geminiApiKey.trim());
+      toast.success('Gemini API key saved successfully');
+    } else {
+      localStorage.removeItem('gemini_api_key');
+      toast.success('Gemini API key removed');
+    }
+    setShowGeminiKey(false);
+  };
+
+  const handleRemoveGeminiKey = () => {
+    localStorage.removeItem('gemini_api_key');
+    setGeminiApiKey('');
+    toast.success('Gemini API key removed');
+  };
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/login');
@@ -200,10 +225,14 @@ const Profile: React.FC = () => {
           </div>
 
           <Tabs defaultValue="profile" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3 lg:grid-cols-3 bg-slate-800/50">
+            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-4 bg-slate-800/50">
               <TabsTrigger value="profile" className="data-[state=active]:bg-blue-600">
                 <User className="h-4 w-4 mr-2" />
                 Profile
+              </TabsTrigger>
+              <TabsTrigger value="ai-settings" className="data-[state=active]:bg-purple-600">
+                <Star className="h-4 w-4 mr-2" />
+                AI Settings
               </TabsTrigger>
               <TabsTrigger value="security" className="data-[state=active]:bg-blue-600">
                 <Shield className="h-4 w-4 mr-2" />
@@ -446,6 +475,156 @@ const Profile: React.FC = () => {
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="ai-settings">
+              <Card className="bg-slate-800/50 border-slate-700">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Star className="h-5 w-5" />
+                    AI Settings
+                  </CardTitle>
+                  <CardDescription className="text-slate-300">
+                    Configure AI integrations for enhanced analysis features
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Gemini API Key Section */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-medium text-white">Google Gemini API</h3>
+                        <p className="text-sm text-slate-400">
+                          Enable AI-powered insights and descriptions for your lunar surface analysis
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {geminiApiKey ? (
+                          <div className="flex items-center gap-2 text-green-400 bg-green-400/20 px-3 py-1 rounded-full text-sm">
+                            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                            Connected
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-red-400 bg-red-400/20 px-3 py-1 rounded-full text-sm">
+                            <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                            Not Connected
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {geminiApiKey ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between p-4 bg-slate-700/50 rounded-lg">
+                          <div>
+                            <p className="text-white font-medium">API Key Configured</p>
+                            <p className="text-sm text-slate-400">
+                              {showGeminiKey
+                                ? geminiApiKey
+                                : `${'*'.repeat(Math.max(0, geminiApiKey.length - 8))}${geminiApiKey.slice(-8)}`
+                              }
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowGeminiKey(!showGeminiKey)}
+                              className="bg-slate-600 border-slate-500 text-white hover:bg-slate-500"
+                            >
+                              {showGeminiKey ? 'Hide' : 'Show'}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={handleRemoveGeminiKey}
+                              className="bg-red-600 border-red-500 text-white hover:bg-red-500"
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="p-4 bg-blue-950/50 border border-blue-800/50 rounded-lg">
+                          <h4 className="text-blue-200 font-medium mb-2">How to get your Gemini API Key:</h4>
+                          <ol className="text-sm text-blue-300 space-y-1 list-decimal list-inside">
+                            <li>Visit <a href="https://ai.google.dev" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-200">Google AI Studio</a></li>
+                            <li>Sign in with your Google account</li>
+                            <li>Click "Get API Key" and create a new API key</li>
+                            <li>Copy the API key and paste it below</li>
+                          </ol>
+                        </div>
+
+                        <div className="space-y-3">
+                          <Label htmlFor="geminiApiKey" className="text-slate-200">
+                            Gemini API Key
+                          </Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="geminiApiKey"
+                              type="password"
+                              placeholder="Enter your Gemini API key..."
+                              value={geminiApiKey}
+                              onChange={(e) => setGeminiApiKey(e.target.value)}
+                              className="bg-slate-700/50 border-slate-600 text-white"
+                            />
+                            <Button
+                              type="button"
+                              onClick={handleSaveGeminiKey}
+                              disabled={!geminiApiKey.trim()}
+                              className="bg-blue-600 hover:bg-blue-700"
+                            >
+                              Save
+                            </Button>
+                          </div>
+                          <p className="text-xs text-slate-400">
+                            Your API key is stored locally in your browser and never sent to our servers.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Benefits Section */}
+                  <div className="border-t border-slate-700 pt-6">
+                    <h4 className="text-white font-medium mb-3">AI Features Enabled:</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-start gap-3 p-3 bg-slate-700/30 rounded-lg">
+                        <div className="w-2 h-2 bg-green-400 rounded-full mt-2"></div>
+                        <div>
+                          <p className="text-white font-medium text-sm">Smart Analysis</p>
+                          <p className="text-slate-400 text-xs">AI-powered interpretation of terrain features</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 bg-slate-700/30 rounded-lg">
+                        <div className="w-2 h-2 bg-green-400 rounded-full mt-2"></div>
+                        <div>
+                          <p className="text-white font-medium text-sm">Scientific Descriptions</p>
+                          <p className="text-slate-400 text-xs">Detailed geological and mission insights</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 bg-slate-700/30 rounded-lg">
+                        <div className="w-2 h-2 bg-green-400 rounded-full mt-2"></div>
+                        <div>
+                          <p className="text-white font-medium text-sm">Mission Planning</p>
+                          <p className="text-slate-400 text-xs">Landing site recommendations and risk assessment</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 bg-slate-700/30 rounded-lg">
+                        <div className="w-2 h-2 bg-green-400 rounded-full mt-2"></div>
+                        <div>
+                          <p className="text-white font-medium text-sm">Quality Assessment</p>
+                          <p className="text-slate-400 text-xs">Automated quality scoring and validation</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </CardContent>

@@ -24,6 +24,7 @@ def api_info():
         "endpoints": {
             "status": "/api/status/",
             "results": "/api/results/",
+            "dashboard": "/api/results/dashboard",
             "analysis": "/api/analysis/",
             "upload": "/api/upload/"
         },

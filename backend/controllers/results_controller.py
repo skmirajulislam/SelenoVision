@@ -173,11 +173,8 @@ class ResultsController:
             print(
                 f"Debug: Found {len(results)} results for user {current_user_id}")
 
-            return jsonify({
-                "success": True,
-                "results": results,
-                "total": len(results)
-            })
+            # Return results array directly for the frontend to work
+            return jsonify(results)
         except Exception as e:
             print(f"Debug: Error in get_user_results: {e}")
             return jsonify({
@@ -218,5 +215,41 @@ class ResultsController:
             return jsonify({
                 "success": False,
                 "error": "Failed to delete result",
+                "details": str(e)
+            }), 500
+
+    @staticmethod
+    @jwt_required()
+    def get_dashboard_data():
+        """Get dashboard data with statistics and recent results"""
+        try:
+            current_user_id = get_jwt_identity()
+
+            if not current_user_id:
+                return jsonify({
+                    "success": False,
+                    "error": "Authentication required"
+                }), 401
+
+            # Get user statistics
+            stats = ProcessingResult.get_user_statistics(current_user_id)
+
+            # Get recent results (last 5)
+            recent_results = ProcessingResult.find_by_user_id(
+                current_user_id, limit=5)
+
+            return jsonify({
+                "total_results": stats.get('total_results', 0),
+                "completed_results": stats.get('completed_results', 0),
+                "processing_results": stats.get('processing_results', 0),
+                "queued_results": stats.get('queued_results', 0),
+                "failed_results": stats.get('failed_results', 0),
+                "recent_results": recent_results
+            })
+        except Exception as e:
+            print(f"Error in get_dashboard_data: {e}")
+            return jsonify({
+                "success": False,
+                "error": "Failed to retrieve dashboard data",
                 "details": str(e)
             }), 500

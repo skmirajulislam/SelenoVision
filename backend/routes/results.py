@@ -49,3 +49,9 @@ def list_result_files(job_id):
 def preview_file(job_id, filename):
     """Preview file (for images)"""
     return ResultsController.preview_file(job_id, filename)
+
+
+@results_bp.route('/dashboard', methods=['GET'])
+def get_dashboard_data():
+    """Get dashboard data with statistics and recent results"""
+    return ResultsController.get_dashboard_data()

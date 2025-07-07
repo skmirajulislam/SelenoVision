@@ -115,7 +115,7 @@ const ResultCard: React.FC<ResultCardProps> = ({ result, onDelete, token }) => {
         try {
             const apiKey = localStorage.getItem('gemini_api_key');
             if (!apiKey) {
-                toast.error('Gemini API key not found. Please add it in your profile.');
+                toast.error('Gemini API key not found. Please configure it in your profile under AI Settings.');
                 return;
             }
 
@@ -194,6 +194,46 @@ Provide a comprehensive analysis including geological insights, mission implicat
         document.body.removeChild(link);
     };
 
+    const downloadAllImages = async () => {
+        if (!result.cloudinary_urls) {
+            toast.error('No images available for download');
+            return;
+        }
+
+        toast.info('Starting download of all images...');
+
+        const imageTypes = [
+            { key: 'original_image', name: 'original_image.jpg' },
+            { key: 'visualization', name: 'main_visualization.png' },
+            { key: 'analysis_plot', name: 'comprehensive_analysis.png' },
+            { key: 'slope_analysis', name: 'slope_analysis.png' },
+            { key: 'aspect_analysis', name: 'aspect_analysis.png' },
+            { key: 'hillshade', name: 'hillshade.png' },
+            { key: 'contour_lines', name: 'contour_lines.png' },
+            { key: 'quality_report', name: 'quality_report.png' }
+        ];
+
+        let downloadCount = 0;
+        for (const imageType of imageTypes) {
+            const url = result.cloudinary_urls[imageType.key as keyof typeof result.cloudinary_urls];
+            if (url) {
+                try {
+                    await new Promise(resolve => setTimeout(resolve, 500)); // Small delay between downloads
+                    downloadImage(url, `${result.job_id}_${imageType.name}`);
+                    downloadCount++;
+                } catch (error) {
+                    console.error(`Failed to download ${imageType.name}:`, error);
+                }
+            }
+        }
+
+        if (downloadCount > 0) {
+            toast.success(`Successfully started download of ${downloadCount} images`);
+        } else {
+            toast.error('No images were available for download');
+        }
+    };
+
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleString();
     };
@@ -255,7 +295,7 @@ Provide a comprehensive analysis including geological insights, mission implicat
                             </div>
                         )}
 
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -265,6 +305,17 @@ Provide a comprehensive analysis including geological insights, mission implicat
                                 <Eye className="w-4 h-4 mr-1" />
                                 View Details
                             </Button>
+                            {result.status === 'completed' && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={downloadAllImages}
+                                    className="text-green-600 hover:text-green-700"
+                                >
+                                    <Download className="w-4 h-4 mr-1" />
+                                    Download All
+                                </Button>
+                            )}
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -282,10 +333,20 @@ Provide a comprehensive analysis including geological insights, mission implicat
             <Dialog open={showDetails} onOpenChange={setShowDetails}>
                 <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <Layers className="w-5 h-5" />
-                            Lunar Surface Analysis: {result.original_filename}
-                        </DialogTitle>
+                        <div className="flex items-center justify-between">
+                            <DialogTitle className="flex items-center gap-2">
+                                <Layers className="w-5 h-5" />
+                                Lunar Surface Analysis: {result.original_filename}
+                            </DialogTitle>
+                            <Button
+                                onClick={downloadAllImages}
+                                className="bg-green-600 hover:bg-green-700"
+                                size="sm"
+                            >
+                                <Download className="w-4 h-4 mr-2" />
+                                Download All Images
+                            </Button>
+                        </div>
                     </DialogHeader>
 
                     <Tabs defaultValue="overview" className="w-full">
@@ -479,6 +540,26 @@ Provide a comprehensive analysis including geological insights, mission implicat
                                         <img
                                             src={result.cloudinary_urls.quality_report}
                                             alt="Quality Report"
+                                            className="w-full h-48 object-cover rounded border"
+                                        />
+                                    </div>
+                                )}
+
+                                {result.cloudinary_urls.analysis_plot && (
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="font-medium">Comprehensive Analysis</h4>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => downloadImage(result.cloudinary_urls.analysis_plot!, 'comprehensive_analysis.png')}
+                                            >
+                                                <Download className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                        <img
+                                            src={result.cloudinary_urls.analysis_plot}
+                                            alt="Comprehensive Analysis"
                                             className="w-full h-48 object-cover rounded border"
                                         />
                                     </div>

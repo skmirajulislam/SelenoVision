@@ -42,10 +42,10 @@ def main():
     print("🚀 High-Resolution Lunar DEM Generation API")
     print("📡 Structured Flask Application")
     print("🔗 CORS Enabled for Frontend Integration")
-    print("🏠 Landing Page: http://localhost:5000/")
-    print("📚 Swagger Documentation: http://localhost:5000/docs")
-    print("🔧 Health Check: http://localhost:5000/health")
-    print("⚡ API Base: http://localhost:5000/api/")
+    print("🏠 Landing Page: http://localhost:5002/")
+    print("📚 Swagger Documentation: http://localhost:5002/docs")
+    print("🔧 Health Check: http://localhost:5002/health")
+    print("⚡ API Base: http://localhost:5002/api/")
     print("="*60 + "\n")
 
     # Run the app

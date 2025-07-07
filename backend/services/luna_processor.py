@@ -42,9 +42,9 @@ class LunaProcessor:
     def _process_image(job: ProcessingJob, user_id: str = None) -> Dict[str, Any]:
         """Process lunar image with comprehensive result generation and cloud storage"""
         try:
-            # Create processing result in database
-            processing_result_id = None
-            if user_id:
+            # Use existing processing result if available, otherwise create new one
+            processing_result_id = getattr(job, 'result_id', None)
+            if user_id and not processing_result_id:
                 processing_result_id = ProcessingResult.create_result(
                     user_id=user_id,
                     job_id=job.job_id,
@@ -172,7 +172,6 @@ class LunaProcessor:
                 # Map specific visualization files
                 viz_mapping = {
                     "main_visualization": "ultra_clear_dem.png",
-                    "analysis_plot": "comprehensive_analysis.png",
                     "slope_analysis": "lunar_surface_analysis.png",
                     "aspect_analysis": "high_contrast_dem.png",
                     "hillshade": "publication_quality_dem.png",
@@ -186,6 +185,7 @@ class LunaProcessor:
 
                 # Analysis files
                 analysis_mapping = {
+                    "analysis_plot": os.path.join(output_dir, "comprehensive_analysis.png"),
                     "quality_report": os.path.join(analysis_dir, "analysis_summary.png"),
                     "processing_log": os.path.join(analysis_dir, "analysis_report.txt")
                 }
@@ -261,8 +261,8 @@ class LunaProcessor:
             job.set_error(error_msg)
 
             # Update processing result if exists
-            if processing_result:
-                processing_result.update_status("failed")
+            if processing_result_id:
+                ProcessingResult.update_status(processing_result_id, "failed")
 
             raise e
 

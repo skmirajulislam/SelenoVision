@@ -147,17 +147,13 @@ export const api = {
   getUserResults: async (): Promise<ApiResponse<any[]>> => {
     try {
       const token = getAuthToken();
-      console.log('🔐 Token retrieved for getUserResults:', token ? 'Present' : 'Missing');
-
       if (!token) {
-        console.log('❌ No authentication token found');
         return {
           success: false,
           error: 'No authentication token found'
         };
       }
 
-      console.log('📡 Making API call to:', `${API_BASE_URL}/api/results/`);
       const response = await fetch(`${API_BASE_URL}/api/results/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -165,17 +161,22 @@ export const api = {
         }
       });
 
-      console.log('📊 API Response status:', response.status);
-
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('✅ API Response data:', { success: data.success, resultsCount: data.results?.length, total: data.total });
-      return { success: true, data: data.results || [] };
+
+      // Handle both old format (with success/results) and new format (direct array)
+      if (Array.isArray(data)) {
+        return { success: true, data };
+      } else if (data.success && data.results) {
+        return { success: true, data: data.results };
+      } else {
+        return { success: true, data: [] };
+      }
     } catch (error) {
-      console.error('❌ User results fetch error:', error);
+      console.error('User results fetch error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to get user results'
