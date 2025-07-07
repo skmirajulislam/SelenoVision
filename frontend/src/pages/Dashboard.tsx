@@ -166,6 +166,7 @@ const Dashboard: React.FC = () => {
       { key: 'original_image', name: 'original_image.jpg' },
       { key: 'visualization', name: 'main_visualization.png' },
       { key: 'analysis_plot', name: 'comprehensive_analysis.png' },
+      { key: 'comprehensive_analysis', name: 'comprehensive_analysis.png' }, // Add this line
       { key: 'slope_analysis', name: 'slope_analysis.png' },
       { key: 'aspect_analysis', name: 'aspect_analysis.png' },
       { key: 'hillshade', name: 'hillshade.png' },

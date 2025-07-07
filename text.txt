@@ -1,9 +1,0 @@
-great job brother u did solid job im very satisfied but there are still some small bugs exist
-
-in result AI-Generated Analysis it showing this warning api key not found fix it maybe its cusing error in backend side or frontend side fix it the flow is dont store api key in backend .env rather than take it from frontent side and send it to backend and perform this analysis
-
-and the second problem is in this AI Settings whenever i saved my api key and refresh it or go to another route it shows api not connected but i alredy puted the api key a moment before store it in cookies and dont show this and if api key is aviable then activate this all functions as well like AI-Generated Analysis, and chatbot dont show that api key not found or input api key take api key from cookies and send it to backend if needed
-
-and if we update the api key from any where like from chat bot or ai Settings it should updated in cookies
-
-add one extra feature in chat bot clear messages

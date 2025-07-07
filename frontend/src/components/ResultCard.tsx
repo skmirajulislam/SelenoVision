@@ -36,6 +36,7 @@ interface ProcessingResult {
         dem_geotiff?: string;
         visualization?: string;
         analysis_plot?: string;
+        comprehensive_analysis?: string;  // Add this new field
         slope_analysis?: string;
         aspect_analysis?: string;
         hillshade?: string;
@@ -129,15 +130,8 @@ const ResultCard: React.FC<ResultCardProps> = ({ result, onDelete, token }) => {
         }
     };
 
-    const downloadImage = (url: string, filename: string) => {
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
+    // Add comprehensive_analysis to the download function
+    // ...existing code...
 
     const downloadAllImages = async () => {
         if (!result.cloudinary_urls) {
@@ -145,12 +139,11 @@ const ResultCard: React.FC<ResultCardProps> = ({ result, onDelete, token }) => {
             return;
         }
 
-        toast.info('Starting download of all images...');
-
         const imageTypes = [
             { key: 'original_image', name: 'original_image.jpg' },
             { key: 'visualization', name: 'main_visualization.png' },
-            { key: 'analysis_plot', name: 'comprehensive_analysis.png' },
+            { key: 'analysis_plot', name: 'analysis_plot.png' },
+            { key: 'comprehensive_analysis', name: 'comprehensive_analysis.png' },
             { key: 'slope_analysis', name: 'slope_analysis.png' },
             { key: 'aspect_analysis', name: 'aspect_analysis.png' },
             { key: 'hillshade', name: 'hillshade.png' },
@@ -158,26 +151,78 @@ const ResultCard: React.FC<ResultCardProps> = ({ result, onDelete, token }) => {
             { key: 'quality_report', name: 'quality_report.png' }
         ];
 
-        let downloadCount = 0;
-        for (const imageType of imageTypes) {
-            const url = result.cloudinary_urls[imageType.key as keyof typeof result.cloudinary_urls];
-            if (url) {
-                try {
-                    await new Promise(resolve => setTimeout(resolve, 500)); // Small delay between downloads
-                    downloadImage(url, `${result.job_id}_${imageType.name}`);
-                    downloadCount++;
-                } catch (error) {
-                    console.error(`Failed to download ${imageType.name}:`, error);
+        // Filter only available images
+        const availableImages = imageTypes.filter(imageType =>
+            result.cloudinary_urls[imageType.key as keyof typeof result.cloudinary_urls]
+        );
+
+        if (availableImages.length === 0) {
+            toast.error('No images available for download');
+            return;
+        }
+
+        toast.info(`Starting download of ${availableImages.length} images...`);
+
+        let successCount = 0;
+        let failCount = 0;
+
+        // Download images sequentially with delay to avoid browser blocking
+        for (const imageType of availableImages) {
+            try {
+                const imageUrl = result.cloudinary_urls[imageType.key as keyof typeof result.cloudinary_urls];
+                if (imageUrl) {
+                    // Create a temporary link element
+                    const link = document.createElement('a');
+                    link.href = imageUrl;
+                    link.download = imageType.name;
+                    link.target = '_blank';
+
+                    // Add to document, click, and remove
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    successCount++;
+
+                    // Add delay between downloads to prevent browser blocking
+                    await new Promise(resolve => setTimeout(resolve, 500));
                 }
+            } catch (error) {
+                console.error(`Failed to download ${imageType.name}:`, error);
+                failCount++;
             }
         }
 
-        if (downloadCount > 0) {
-            toast.success(`Successfully started download of ${downloadCount} images`);
+        // Show final result
+        if (successCount > 0) {
+            toast.success(`Successfully initiated download of ${successCount} images${failCount > 0 ? ` (${failCount} failed)` : ''}`);
         } else {
-            toast.error('No images were available for download');
+            toast.error('Failed to download any images');
         }
     };
+
+    // Individual image download function (improved)
+    const downloadImage = async (imageUrl: string, filename: string) => {
+        try {
+            toast.info(`Downloading ${filename}...`);
+
+            const link = document.createElement('a');
+            link.href = imageUrl;
+            link.download = filename;
+            link.target = '_blank';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            toast.success(`${filename} download started`);
+        } catch (error) {
+            console.error('Download failed:', error);
+            toast.error(`Failed to download ${filename}`);
+        }
+    };
+
+    // ...existing code...
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleString();
@@ -403,6 +448,26 @@ const ResultCard: React.FC<ResultCardProps> = ({ result, onDelete, token }) => {
                                         </div>
                                         <img
                                             src={result.cloudinary_urls.analysis_plot}
+                                            alt="Comprehensive Analysis"
+                                            className="w-full h-48 object-cover rounded border"
+                                        />
+                                    </div>
+                                )}
+
+                                {result.cloudinary_urls.comprehensive_analysis && (
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="font-medium">Comprehensive Analysis</h4>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => downloadImage(result.cloudinary_urls.comprehensive_analysis!, 'comprehensive_analysis.png')}
+                                            >
+                                                <Download className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                        <img
+                                            src={result.cloudinary_urls.comprehensive_analysis}
                                             alt="Comprehensive Analysis"
                                             className="w-full h-48 object-cover rounded border"
                                         />

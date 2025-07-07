@@ -161,6 +161,7 @@ class LunaProcessor:
                     "geotiff": geotiff_path,
                     "main_visualization": None,
                     "analysis_plot": None,
+                    "comprehensive_analysis": None,  # Add this new field
                     "slope_analysis": None,
                     "aspect_analysis": None,
                     "hillshade": None,
@@ -176,7 +177,8 @@ class LunaProcessor:
                     "aspect_analysis": "high_contrast_dem.png",
                     "hillshade": "publication_quality_dem.png",
                     "contour_lines": "lunar_terrain_3d.png",
-                    "analysis_plot": "comprehensive_analysis.png"
+                    "analysis_plot": "comprehensive_analysis.png",  # Keep existing mapping
+                    "comprehensive_analysis": "comprehensive_analysis.png"  # Add dedicated mapping
                 }
 
                 for key, filename in viz_mapping.items():
@@ -186,7 +188,8 @@ class LunaProcessor:
 
                 # Analysis files (quality report only)
                 analysis_mapping = {
-                    "quality_report": os.path.join(analysis_dir, "analysis_summary.png")
+                    "quality_report": os.path.join(analysis_dir, "analysis_summary.png"),
+                    "comprehensive_analysis": os.path.join(analysis_dir, "comprehensive_analysis.png")  # Add from analysis dir too
                 }
 
                 for key, file_path in analysis_mapping.items():

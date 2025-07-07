@@ -214,19 +214,13 @@ class CloudinaryService:
     def upload_luna_analysis_files(self, job_id: str, files_dict: dict) -> dict:
         """
         Upload Luna analysis files to Cloudinary with the expected structure
-
-        Args:
-            job_id (str): Unique job identifier
-            files_dict (dict): Dictionary containing file paths for upload
-
-        Returns:
-            dict: Dictionary with cloudinary URLs for each file type
         """
         results = {
             "original_image": None,
             "dem_geotiff": None,
             "visualization": None,
             "analysis_plot": None,
+            "comprehensive_analysis": None,  # Add this new field
             "slope_analysis": None,
             "aspect_analysis": None,
             "hillshade": None,
@@ -244,6 +238,7 @@ class CloudinaryService:
                 "dem_geotiff": files_dict.get("geotiff"),
                 "visualization": files_dict.get("main_visualization"),
                 "analysis_plot": files_dict.get("analysis_plot"),
+                "comprehensive_analysis": files_dict.get("comprehensive_analysis"),  # Add this mapping
                 "slope_analysis": files_dict.get("slope_analysis"),
                 "aspect_analysis": files_dict.get("aspect_analysis"),
                 "hillshade": files_dict.get("hillshade"),
@@ -261,8 +256,7 @@ class CloudinaryService:
                     )
                     if result:
                         results[file_type] = result["secure_url"]
-                        print(
-                            f"✅ Uploaded {file_type}: {result['secure_url']}")
+                        print(f"✅ Uploaded {file_type}: {result['secure_url']}")
 
             return results
 

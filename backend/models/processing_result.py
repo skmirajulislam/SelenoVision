@@ -33,6 +33,7 @@ class ProcessingResult:
             "dem_geotiff": None,
             "visualization": None,
             "analysis_plot": None,
+            "comprehensive_analysis": None,  # Add this new field
             "slope_analysis": None,
             "aspect_analysis": None,
             "hillshade": None,
@@ -60,6 +61,7 @@ class ProcessingResult:
                     "dem_geotiff": None,
                     "visualization": None,
                     "analysis_plot": None,
+                    "comprehensive_analysis": None,  # Add this new field
                     "slope_analysis": None,
                     "aspect_analysis": None,
                     "hillshade": None,

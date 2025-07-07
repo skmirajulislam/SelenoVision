@@ -25,6 +25,7 @@ interface ProcessingResult {
         dem_geotiff?: string;
         visualization?: string;
         analysis_plot?: string;
+        comprehensive_analysis?: string;  // Add this new field
         slope_analysis?: string;
         aspect_analysis?: string;
         hillshade?: string;
