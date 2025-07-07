@@ -10,6 +10,7 @@ import Navigation from '../components/Navigation';
 import { toast } from 'sonner';
 import { User, Settings, Trash2, LogOut, Edit, Mail, Calendar, Shield, BarChart3, Clock, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import Cookies from 'js-cookie';
 
 interface UserStats {
   total_processed: number;
@@ -43,16 +44,30 @@ const Profile: React.FC = () => {
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
-      });
-      fetchUserStats();
+      }); fetchUserStats();
 
-      // Load Gemini API key from localStorage
-      const savedGeminiKey = localStorage.getItem('gemini_api_key');
+      // Load Gemini API key from cookies
+      const savedGeminiKey = Cookies.get('gemini_api_key');
       if (savedGeminiKey) {
         setGeminiApiKey(savedGeminiKey);
       }
     }
   }, [user]);
+
+  useEffect(() => {
+    // Poll for API key changes every 2 seconds to stay in sync with chatbot
+    const pollApiKey = () => {
+      const currentApiKey = Cookies.get('gemini_api_key');
+      if (currentApiKey && currentApiKey !== geminiApiKey) {
+        setGeminiApiKey(currentApiKey);
+      } else if (!currentApiKey && geminiApiKey) {
+        setGeminiApiKey('');
+      }
+    };
+
+    const interval = setInterval(pollApiKey, 2000);
+    return () => clearInterval(interval);
+  }, [geminiApiKey]);
 
   const fetchUserStats = async () => {
     try {
@@ -169,17 +184,21 @@ const Profile: React.FC = () => {
 
   const handleSaveGeminiKey = () => {
     if (geminiApiKey.trim()) {
-      localStorage.setItem('gemini_api_key', geminiApiKey.trim());
+      Cookies.set('gemini_api_key', geminiApiKey.trim(), {
+        expires: 365, // 1 year
+        secure: false, // Set to true in production with HTTPS
+        sameSite: 'lax'
+      });
       toast.success('Gemini API key saved successfully');
     } else {
-      localStorage.removeItem('gemini_api_key');
+      Cookies.remove('gemini_api_key');
       toast.success('Gemini API key removed');
     }
     setShowGeminiKey(false);
   };
 
   const handleRemoveGeminiKey = () => {
-    localStorage.removeItem('gemini_api_key');
+    Cookies.remove('gemini_api_key');
     setGeminiApiKey('');
     toast.success('Gemini API key removed');
   };
@@ -586,7 +605,7 @@ const Profile: React.FC = () => {
                             </Button>
                           </div>
                           <p className="text-xs text-slate-400">
-                            Your API key is stored locally in your browser and never sent to our servers.
+                            Your API key is stored securely in cookies and sent to backend only when needed.
                           </p>
                         </div>
                       </div>

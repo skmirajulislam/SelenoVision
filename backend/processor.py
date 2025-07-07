@@ -1138,26 +1138,28 @@ def analyze_dem_quality(dem: np.ndarray, image: np.ndarray) -> Dict[str, Any]:
 
 
 def save_analysis_results(analysis: Dict[str, Any], test_results: Dict[str, Any],
-                          processing_info: Dict[str, Any], analysis_dir: str):
+                          processing_info: Dict[str, Any], analysis_dir: str, skip_report: bool = False):
     """Save comprehensive analysis results"""
     print_step("Saving analysis results")
 
-    # Create analysis report
-    report_path = os.path.join(analysis_dir, 'analysis_report.txt')
+    # Skip creating analysis report if requested
+    if not skip_report:
+        # Create analysis report
+        report_path = os.path.join(analysis_dir, 'analysis_report.txt')
 
-    with open(report_path, 'w') as f:
-        f.write("LUNA PHOTOCLINOMETRY - ANALYSIS REPORT\n")
-        f.write("=" * 50 + "\n\n")
+        with open(report_path, 'w') as f:
+            f.write("LUNA PHOTOCLINOMETRY - ANALYSIS REPORT\n")
+            f.write("=" * 50 + "\n\n")
 
-        # Lunar Surface Analysis Information
-        f.write("LUNAR SURFACE ANALYSIS INFORMATION\n")
-        f.write("-" * 35 + "\n")
-        f.write(
-            f"Source lunar image: {processing_info.get('image_file', 'N/A')}\n")
-        f.write(
-            f"Photoclinometry iterations: {processing_info.get('iterations', 'N/A')}\n")
-        f.write(
-            f"Shape-from-Shading convergence: {'Successful' if processing_info.get('converged', False) else 'Reached maximum iterations'}\n")
+            # Lunar Surface Analysis Information
+            f.write("LUNAR SURFACE ANALYSIS INFORMATION\n")
+            f.write("-" * 35 + "\n")
+            f.write(
+                f"Source lunar image: {processing_info.get('image_file', 'N/A')}\n")
+            f.write(
+                f"Photoclinometry iterations: {processing_info.get('iterations', 'N/A')}\n")
+            f.write(
+                f"Shape-from-Shading convergence: {'Successful' if processing_info.get('converged', False) else 'Reached maximum iterations'}\n")
         f.write(
             f"DEM quality: Suitable for lunar mission planning and terrain analysis\n\n")
 
@@ -1242,6 +1244,10 @@ def save_analysis_results(analysis: Dict[str, Any], test_results: Dict[str, Any]
         f.write(
             f"  Sub-pixel processing accuracy: {mission_stats['sub_pixel_accuracy']:.2f}\n")
 
+        print(f"  Analysis report saved: {report_path}")
+    else:
+        print("  Analysis report generation skipped")
+
     # Save detailed analysis as JSON
     import json
 
@@ -1255,7 +1261,6 @@ def save_analysis_results(analysis: Dict[str, Any], test_results: Dict[str, Any]
     with open(json_path, 'w') as f:
         json.dump(full_analysis, f, indent=2)
 
-    print(f"  Analysis report saved: {report_path}")
     print(f"  Detailed analysis saved: {json_path}")
 
 

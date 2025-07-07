@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { MessageCircle, Send, Settings, X, Moon, Stars } from 'lucide-react';
+import { MessageCircle, Send, Settings, X, Moon, Stars, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import Cookies from 'js-cookie';
 import { API_CONFIG, STORAGE_KEYS } from '../config/constants';
@@ -39,6 +39,23 @@ const LunarChatbot: React.FC<LunarChatbotProps> = ({ isOpen, onClose }) => {
   }, []);
 
   useEffect(() => {
+    // Poll for API key changes every 2 seconds to stay in sync with AI Settings
+    const pollApiKey = () => {
+      const currentApiKey = Cookies.get(STORAGE_KEYS.GEMINI_API_KEY);
+      if (currentApiKey && currentApiKey !== apiKey) {
+        setApiKey(currentApiKey);
+        setShowApiKeyInput(false);
+      } else if (!currentApiKey && apiKey) {
+        setApiKey('');
+        setShowApiKeyInput(true);
+      }
+    };
+
+    const interval = setInterval(pollApiKey, 2000);
+    return () => clearInterval(interval);
+  }, [apiKey]);
+
+  useEffect(() => {
     // Add welcome message only once
     if (messages.length === 0) {
       setMessages([{
@@ -52,21 +69,43 @@ const LunarChatbot: React.FC<LunarChatbotProps> = ({ isOpen, onClose }) => {
 
   const saveApiKey = () => {
     if (apiKey.trim()) {
-      Cookies.set(STORAGE_KEYS.GEMINI_API_KEY, apiKey, { expires: 30 }); // 30 days
+      // Update the cookie with a 1-year expiry to match AI Settings
+      Cookies.set(STORAGE_KEYS.GEMINI_API_KEY, apiKey.trim(), {
+        expires: 365, // 1 year to match AI Settings
+        secure: false, // Set to true in production with HTTPS
+        sameSite: 'lax'
+      });
       setShowApiKeyInput(false);
-      toast.success('API key saved successfully!');
+      toast.success('API key saved successfully! This will also update AI Settings.');
     } else {
       toast.error('Please enter a valid API key');
     }
   };
 
+  const clearMessages = () => {
+    setMessages([{
+      id: '1',
+      text: "🌙 Hello! I'm your Lunar Assistant. I can help you with questions about the Moon, Solar System, and Universe. What would you like to know?",
+      isUser: false,
+      timestamp: new Date()
+    }]);
+    toast.success('Chat messages cleared');
+  };
+
   const sendMessage = async () => {
     if (!inputMessage.trim()) return;
 
-    if (!apiKey) {
-      toast.error('Please set your Gemini API key first');
+    // Always check for the latest API key from cookies to ensure sync
+    const currentApiKey = Cookies.get(STORAGE_KEYS.GEMINI_API_KEY);
+    if (!currentApiKey) {
+      toast.error('Gemini API key not found. Please configure it in AI Settings or add it here.');
       setShowApiKeyInput(true);
       return;
+    }
+
+    // Update local state if different
+    if (currentApiKey !== apiKey) {
+      setApiKey(currentApiKey);
     }
 
     const userMessage: ChatMessage = {
@@ -88,7 +127,7 @@ const LunarChatbot: React.FC<LunarChatbotProps> = ({ isOpen, onClose }) => {
         },
         body: JSON.stringify({
           message: inputMessage,
-          api_key: apiKey
+          api_key: currentApiKey
         })
       });
 
@@ -142,8 +181,18 @@ const LunarChatbot: React.FC<LunarChatbotProps> = ({ isOpen, onClose }) => {
               <Button
                 variant="ghost"
                 size="sm"
+                onClick={clearMessages}
+                className="text-white hover:bg-purple-800/30"
+                title="Clear Messages"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowApiKeyInput(!showApiKeyInput)}
                 className="text-white hover:bg-purple-800/30"
+                title="API Settings"
               >
                 <Settings className="w-4 h-4" />
               </Button>
@@ -152,6 +201,7 @@ const LunarChatbot: React.FC<LunarChatbotProps> = ({ isOpen, onClose }) => {
                 size="sm"
                 onClick={onClose}
                 className="text-white hover:bg-purple-800/30"
+                title="Close"
               >
                 <X className="w-4 h-4" />
               </Button>
@@ -167,13 +217,27 @@ const LunarChatbot: React.FC<LunarChatbotProps> = ({ isOpen, onClose }) => {
                 className="bg-purple-800/30 border-purple-400/20 text-white placeholder-gray-300"
                 type="password"
               />
-              <Button
-                size="sm"
-                onClick={saveApiKey}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                Save API Key
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={saveApiKey}
+                  disabled={!apiKey.trim()}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Save API Key
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowApiKeyInput(false)}
+                  className="border-purple-400/20 text-white hover:bg-purple-800/30"
+                >
+                  Cancel
+                </Button>
+              </div>
+              <p className="text-xs text-blue-300">
+                This will sync with your AI Settings and enable all AI features
+              </p>
             </div>
           )}
         </CardHeader>
@@ -188,8 +252,8 @@ const LunarChatbot: React.FC<LunarChatbotProps> = ({ isOpen, onClose }) => {
                 >
                   <div
                     className={`max-w-[85%] rounded-lg p-3 ${message.isUser
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-purple-800/30 text-gray-100 border border-purple-400/20'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-purple-800/30 text-gray-100 border border-purple-400/20'
                       }`}
                   >
                     <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>

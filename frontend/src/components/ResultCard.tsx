@@ -14,7 +14,6 @@ import {
     Image as ImageIcon,
     BarChart3,
     Info,
-    Sparkles,
     MapPin,
     Activity,
     Target,
@@ -79,8 +78,6 @@ interface ResultCardProps {
 
 const ResultCard: React.FC<ResultCardProps> = ({ result, onDelete, token }) => {
     const [showDetails, setShowDetails] = useState(false);
-    const [geminiDescription, setGeminiDescription] = useState<string>('');
-    const [loadingDescription, setLoadingDescription] = useState(false);
 
     const getStatusIcon = (status: string) => {
         switch (status) {
@@ -105,58 +102,6 @@ const ResultCard: React.FC<ResultCardProps> = ({ result, onDelete, token }) => {
                 return 'bg-red-100 text-red-800';
             default:
                 return 'bg-yellow-100 text-yellow-800';
-        }
-    };
-
-    const generateGeminiDescription = async () => {
-        if (geminiDescription || !result.analysis_results) return;
-
-        setLoadingDescription(true);
-        try {
-            const apiKey = localStorage.getItem('gemini_api_key');
-            if (!apiKey) {
-                toast.error('Gemini API key not found. Please configure it in your profile under AI Settings.');
-                return;
-            }
-
-            const analysisData = result.analysis_results;
-            const prompt = `Generate a detailed scientific description for this lunar surface analysis:
-
-Quality Score: ${analysisData.quality_score || 'N/A'}
-Height Range: ${analysisData.basic_stats?.height_range || 'N/A'} meters
-Mean Elevation: ${analysisData.basic_stats?.mean_height || 'N/A'} meters
-Crater Candidates: ${analysisData.mission_metrics?.crater_candidates || 'N/A'}
-Suitable Landing Sites: ${analysisData.mission_metrics?.suitable_landing_sites || 'N/A'}
-Flat Terrain: ${analysisData.mission_metrics?.flat_terrain_percent || 'N/A'}%
-Max Slope: ${analysisData.gradient_stats?.max_slope || 'N/A'}°
-
-Provide a comprehensive analysis including geological insights, mission implications, and terrain characteristics in 2-3 paragraphs.`;
-
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{
-                            text: prompt
-                        }]
-                    }]
-                })
-            });
-
-            const data = await response.json();
-            if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
-                setGeminiDescription(data.candidates[0].content.parts[0].text);
-            } else {
-                throw new Error('No description generated');
-            }
-        } catch (error) {
-            console.error('Error generating description:', error);
-            toast.error('Failed to generate AI description');
-        } finally {
-            setLoadingDescription(false);
         }
     };
 
@@ -350,11 +295,10 @@ Provide a comprehensive analysis including geological insights, mission implicat
                     </DialogHeader>
 
                     <Tabs defaultValue="overview" className="w-full">
-                        <TabsList className="grid w-full grid-cols-4">
+                        <TabsList className="grid w-full grid-cols-3">
                             <TabsTrigger value="overview">Overview</TabsTrigger>
                             <TabsTrigger value="visualizations">Visualizations</TabsTrigger>
                             <TabsTrigger value="analysis">Analysis</TabsTrigger>
-                            <TabsTrigger value="ai-insights">AI Insights</TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="overview" className="space-y-4">
@@ -440,6 +384,26 @@ Provide a comprehensive analysis including geological insights, mission implicat
                                         <img
                                             src={result.cloudinary_urls.visualization}
                                             alt="DEM Visualization"
+                                            className="w-full h-48 object-cover rounded border"
+                                        />
+                                    </div>
+                                )}
+
+                                {result.cloudinary_urls.analysis_plot && (
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="font-medium">Comprehensive Analysis</h4>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => downloadImage(result.cloudinary_urls.analysis_plot!, 'comprehensive_analysis.png')}
+                                            >
+                                                <Download className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                        <img
+                                            src={result.cloudinary_urls.analysis_plot}
+                                            alt="Comprehensive Analysis"
                                             className="w-full h-48 object-cover rounded border"
                                         />
                                     </div>
@@ -544,26 +508,6 @@ Provide a comprehensive analysis including geological insights, mission implicat
                                         />
                                     </div>
                                 )}
-
-                                {result.cloudinary_urls.analysis_plot && (
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <h4 className="font-medium">Comprehensive Analysis</h4>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => downloadImage(result.cloudinary_urls.analysis_plot!, 'comprehensive_analysis.png')}
-                                            >
-                                                <Download className="w-4 h-4" />
-                                            </Button>
-                                        </div>
-                                        <img
-                                            src={result.cloudinary_urls.analysis_plot}
-                                            alt="Comprehensive Analysis"
-                                            className="w-full h-48 object-cover rounded border"
-                                        />
-                                    </div>
-                                )}
                             </div>
                         </TabsContent>
 
@@ -637,51 +581,6 @@ Provide a comprehensive analysis including geological insights, mission implicat
                                     </div>
                                 </div>
                             )}
-                        </TabsContent>
-
-                        <TabsContent value="ai-insights" className="space-y-4">
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-lg font-semibold flex items-center gap-2">
-                                        <Sparkles className="w-5 h-5 text-purple-500" />
-                                        AI-Generated Analysis
-                                    </h3>
-                                    {!geminiDescription && (
-                                        <Button
-                                            onClick={generateGeminiDescription}
-                                            disabled={loadingDescription}
-                                            className="bg-purple-600 hover:bg-purple-700"
-                                        >
-                                            {loadingDescription ? (
-                                                <Activity className="w-4 h-4 mr-2 animate-spin" />
-                                            ) : (
-                                                <Sparkles className="w-4 h-4 mr-2" />
-                                            )}
-                                            Generate Description
-                                        </Button>
-                                    )}
-                                </div>
-
-                                {geminiDescription ? (
-                                    <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
-                                        <div className="prose max-w-none">
-                                            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                                                {geminiDescription}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ) : !loadingDescription ? (
-                                    <div className="p-6 text-center text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
-                                        <Sparkles className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                                        <p>Click "Generate Description" to get AI-powered insights about this lunar surface analysis</p>
-                                    </div>
-                                ) : (
-                                    <div className="p-6 text-center">
-                                        <Activity className="w-8 h-8 mx-auto mb-2 animate-spin text-purple-500" />
-                                        <p className="text-gray-600">Generating AI description...</p>
-                                    </div>
-                                )}
-                            </div>
                         </TabsContent>
                     </Tabs>
                 </DialogContent>

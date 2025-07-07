@@ -136,9 +136,9 @@ class LunaProcessor:
             job.update_status(JobStatus.PROCESSING, 90,
                               "Saving analysis results...")
 
-            # Save analysis results
+            # Save analysis results (excluding analysis_report.txt)
             save_analysis_results(
-                analysis_results, test_results, processing_info, analysis_dir)
+                analysis_results, test_results, processing_info, analysis_dir, skip_report=True)
 
             # Create analysis visualizations
             create_analysis_visualization(
@@ -175,7 +175,8 @@ class LunaProcessor:
                     "slope_analysis": "lunar_surface_analysis.png",
                     "aspect_analysis": "high_contrast_dem.png",
                     "hillshade": "publication_quality_dem.png",
-                    "contour_lines": "lunar_terrain_3d.png"
+                    "contour_lines": "lunar_terrain_3d.png",
+                    "analysis_plot": "comprehensive_analysis.png"
                 }
 
                 for key, filename in viz_mapping.items():
@@ -183,28 +184,18 @@ class LunaProcessor:
                     if os.path.exists(file_path):
                         files_to_upload[key] = file_path
 
-                # Analysis files
+                # Analysis files (quality report only)
                 analysis_mapping = {
-                    "analysis_plot": os.path.join(output_dir, "comprehensive_analysis.png"),
-                    "quality_report": os.path.join(analysis_dir, "analysis_summary.png"),
-                    "processing_log": os.path.join(analysis_dir, "analysis_report.txt")
+                    "quality_report": os.path.join(analysis_dir, "analysis_summary.png")
                 }
 
                 for key, file_path in analysis_mapping.items():
                     if os.path.exists(file_path):
                         files_to_upload[key] = file_path
 
-                # Upload files to Cloudinary with new structure
+                # Upload files to Cloudinary
                 cloudinary_urls = cloudinary_service.upload_luna_analysis_files(
                     job.job_id, files_to_upload)
-
-                # Convert analysis report to JSON
-                analysis_report_json = {}
-                analysis_report_path = os.path.join(
-                    analysis_dir, "analysis_report.txt")
-                if os.path.exists(analysis_report_path):
-                    analysis_report_json = LunaProcessor._convert_analysis_report_to_json(
-                        analysis_report_path)
 
                 # Update processing result in database
                 if processing_result_id:
@@ -237,7 +228,6 @@ class LunaProcessor:
                     "analysis": [
                         "comprehensive_analysis.png",
                         "analysis_summary.png",
-                        "analysis_report.txt",
                         "detailed_analysis.json"
                     ]
                 },
@@ -265,64 +255,6 @@ class LunaProcessor:
                 ProcessingResult.update_status(processing_result_id, "failed")
 
             raise e
-
-    @staticmethod
-    def _convert_analysis_report_to_json(report_path: str) -> Dict[str, Any]:
-        """Convert analysis report text file to JSON format"""
-        try:
-            with open(report_path, 'r') as f:
-                content = f.read()
-
-            # Parse the analysis report (basic implementation)
-            report_json = {
-                "raw_content": content,
-                "summary": {},
-                "metrics": {},
-                "recommendations": []
-            }
-
-            # Extract key metrics from the text
-            lines = content.split('\n')
-            current_section = None
-
-            for line in lines:
-                line = line.strip()
-                if not line:
-                    continue
-
-                if "SUMMARY" in line.upper():
-                    current_section = "summary"
-                elif "METRIC" in line.upper():
-                    current_section = "metrics"
-                elif "RECOMMENDATION" in line.upper():
-                    current_section = "recommendations"
-                elif current_section and ":" in line:
-                    key, value = line.split(":", 1)
-                    key = key.strip()
-                    value = value.strip()
-
-                    if current_section == "summary":
-                        report_json["summary"][key] = value
-                    elif current_section == "metrics":
-                        # Try to convert to number if possible
-                        try:
-                            if "." in value:
-                                report_json["metrics"][key] = float(value)
-                            else:
-                                report_json["metrics"][key] = int(value)
-                        except ValueError:
-                            report_json["metrics"][key] = value
-                    elif current_section == "recommendations":
-                        report_json["recommendations"].append({
-                            "category": key,
-                            "description": value
-                        })
-
-            return report_json
-
-        except Exception as e:
-            print(f"Error converting analysis report to JSON: {e}")
-            return {"error": str(e)}
 
     @staticmethod
     def cleanup_temporary_files(job_id: str):
