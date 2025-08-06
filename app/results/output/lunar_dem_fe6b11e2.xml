@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SelenoVision_DEM_Metadata>
+  <General>
+    <Creation_Date>2025:08:06 15:04:00</Creation_Date>
+    <Software>SelenoVision Photoclinometry HD</Software>
+    <Version>1.0 HD</Version>
+  </General>
+  <Spatial_Properties>
+    <Width>348</Width>
+    <Height>1024</Height>
+    <Pixel_Size>50.0</Pixel_Size>
+    <Units>meters</Units>
+  </Spatial_Properties>
+  <Elevation_Statistics>
+    <MINIMUM>-1909.736497</MINIMUM>
+    <MAXIMUM>1920.438438</MAXIMUM>
+    <MEAN>-42.623904</MEAN>
+    <MEDIAN>-0.084277</MEDIAN>
+    <STDDEV>696.943179</STDDEV>
+    <RANGE>3830.174935</RANGE>
+    <Q1>-330.900067</Q1>
+    <Q3>301.018759</Q3>
+    <IQR>631.918826</IQR>
+    <SKEWNESS>-0.148162</SKEWNESS>
+    <KURTOSIS>1.067829</KURTOSIS>
+    <MEAN_SLOPE>30.276863</MEAN_SLOPE>
+    <MAX_SLOPE>458.484941</MAX_SLOPE>
+    <SLOPE_STD>31.073963</SLOPE_STD>
+  </Elevation_Statistics>
+  <Processing_Parameters>
+    <Algorithm>Shape-from-Shading (Photoclinometry)</Algorithm>
+    <Quality_Level>High Definition</Quality_Level>
+  </Processing_Parameters>
+</SelenoVision_DEM_Metadata>

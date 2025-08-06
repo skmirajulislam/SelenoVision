@@ -1,0 +1,17 @@
+# Material library for SelenoVision Lunar DEM model
+
+newmtl lunar_surface
+Ka 0.2 0.2 0.22
+Kd 0.7 0.7 0.75
+Ks 0.1 0.1 0.12
+Ns 10.0
+illum 2
+d 1.0
+
+newmtl crater_rim
+Ka 0.25 0.23 0.20
+Kd 0.75 0.73 0.70
+Ks 0.15 0.15 0.15
+Ns 20.0
+illum 2
+d 1.0

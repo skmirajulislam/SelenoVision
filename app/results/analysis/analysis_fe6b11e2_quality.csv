@@ -1,0 +1,10 @@
+Metric,Score (0-1)
+Roughness Score,0.1
+Elevation Range Score,1.0
+Detail Preservation Score,1.0
+Consistency Score,0.9308026669488103
+Crater Representation Score,0.9508014547413793
+Information Entropy Score,0.5383279014867471
+Overall Score,0.7532357348928765
+Image Dem Correlation,0.9141206574290291
+Image Dem Gradient Correlation,0.4000280439728105
